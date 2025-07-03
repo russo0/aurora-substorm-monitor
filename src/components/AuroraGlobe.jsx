@@ -32,7 +32,7 @@ export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
 
   return (
     <div className="w-full flex justify-center">
-      <div style={{ width: "600px", height: "600px" }}>
+      <div style={{ width: "400px", height: "400px" }}>
         <Globe
           ref={globeEl}
           globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
