@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./i18n";
 import { useTranslation } from "react-i18next";
 import DataCard from "./components/DataCard";
 import BzChart from "./components/BzChart";
 import { playAlertSound } from "./utils/alertSound";
-
-const PROXY_URL = "https://proxy-noaa.russosec.workers.dev/"; // Use o seu endpoint real
 
 function getChance(bz, wind, kp) {
   if (bz < -2 && wind > 400 && kp >= 4) return "High";
@@ -24,76 +22,25 @@ function getColor(type, value) {
   return "#32FF8F";
 }
 
-function App() {
+export default function App() {
   const { t, i18n } = useTranslation();
-  const [data, setData] = useState({
-    bz: 0,
-    wind: 0,
-    kp: 0,
-    bzHistory: [],
+  // *** DADOS DEMO PARA TESTE VISUAL ***
+  const [data] = useState({
+    bz: -5.1,
+    wind: 520,
+    kp: 6.2,
+    bzHistory: [
+      { time: "18h", bz: -1.2 },
+      { time: "19h", bz: -2.5 },
+      { time: "20h", bz: -3.7 },
+      { time: "21h", bz: -1.9 },
+      { time: "22h", bz:  1.2 },
+      { time: "23h", bz:  3.5 }
+    ],
     time: "--"
   });
-  const [alerted, setAlerted] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState(null);
-
-  useEffect(() => {
-    let interval;
-    const fetchData = async () => {
-      try {
-        const resp = await fetch(PROXY_URL);
-        const json = await resp.json();
-
-        // Adapte aqui conforme o JSON real do seu endpoint!
-        const bz = parseFloat(json.bz ?? 0);
-        const wind = parseFloat(json.wind ?? 0);
-        const kp = parseFloat(json.kp ?? 0);
-
-        // Garante formato correto do histórico
-        const bzHistory = Array.isArray(json.bzHistory)
-          ? json.bzHistory.map((item) => ({
-              time: item.time || "",
-              bz: parseFloat(item.bz)
-            }))
-          : [];
-
-        setData({
-          bz,
-          wind,
-          kp,
-          bzHistory,
-          time: new Date().toLocaleTimeString()
-        });
-        setLastUpdate(new Date().toLocaleTimeString());
-      } catch (e) {
-        console.error("Erro ao buscar dados:", e);
-      }
-    };
-
-    fetchData();
-    interval = setInterval(fetchData, 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Alerta visual/sonoro
-  useEffect(() => {
-    const highAlert = data.bz < -2 && data.wind > 400;
-    if (highAlert && !alerted) {
-      playAlertSound();
-      setAlerted(true);
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Aurora Substorm Monitor", {
-          body: t("Alert! High chance of substorm!"),
-        });
-      }
-    }
-    if (!highAlert && alerted) setAlerted(false);
-  }, [data, t, alerted]);
-
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
-  }, []);
+  // *******************************
+  const [lastUpdate] = useState("agora");
 
   return (
     <div className="min-h-screen flex flex-col items-center px-2 pb-10" style={{
@@ -140,9 +87,7 @@ function App() {
         {/* Chance */}
         <div className="mb-3 text-lg flex gap-2 items-center text-white">
           <span className="text-white">{t("Chance of Substorm")}:</span>
-          <span className="font-semibold text-xl" style={{
-            color: data.bz < -2 && data.wind > 400 && data.kp >= 4 ? "#FFD700" : (data.bz < -2 && data.wind > 400 ? "#32FF8F" : "#FFF")
-          }}>
+          <span className="font-semibold text-xl text-white">
             {t(getChance(data.bz, data.wind, data.kp))}
           </span>
         </div>
@@ -154,5 +99,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
