@@ -1,8 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import Globe from "react-globe.gl";
-import SunCalc from "suncalc";
 
-// Função para gerar cinturão da aurora
+// Gera o cinturão da aurora (latMin ~65, latMax ~70, pode ajustar!)
 function getAuroraBelt(latMin = 65, latMax = 70, steps = 180) {
   const belts = [];
   for (let lat = latMin; lat < latMax; lat += 1) {
@@ -21,40 +20,47 @@ function getAuroraBelt(latMin = 65, latMax = 70, steps = 180) {
   return belts;
 }
 
-// Função para gerar a “noite” (lat, lng, color)
-function getNightArcs(steps = 360) {
-  const date = new Date();
-  const solarLng = ((date.getUTCHours() + date.getUTCMinutes()/60) * 15) - 180;
-  const nightArcs = [];
-  for (let i = 0; i < steps; i++) {
-    const lat = (i * 180) / (steps - 1) - 90;
-    const lngStart = solarLng - 90;
-    const lngEnd = solarLng + 90;
-    nightArcs.push({
-      startLat: lat,
-      startLng: lngStart,
-      endLat: lat,
-      endLng: lngEnd,
-      color: "rgba(0,0,0,0.23)" // sombra sutil!
-    });
+// Gera polígono do terminador noturno (grayline/terminator)
+function getNightPolygon(steps = 180) {
+  const now = new Date();
+  // Longitude onde o sol está a pino (subsolar point)
+  const solarLng = ((now.getUTCHours() + now.getUTCMinutes()/60) * 15) - 180;
+  // A noite cobre de solarLng+90 a solarLng-90 (metade do globo)
+  const coords = [];
+  for (let i = 0; i <= steps; i++) {
+    const lat = (i * 180) / steps - 90;
+    const lng = solarLng + 90;
+    coords.push([lat, lng]);
   }
-  return nightArcs;
+  for (let i = steps; i >= 0; i--) {
+    const lat = (i * 180) / steps - 90;
+    const lng = solarLng - 90;
+    coords.push([lat, lng]);
+  }
+  return [
+    {
+      polygon: coords,
+      color: "rgba(0,0,0,0.33)", // Mais opacidade = mais escuro
+    }
+  ];
 }
-
 
 export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
   const globeEl = useRef();
-  const [nightArcs, setNightArcs] = useState([]);
+  const [nightPolygons, setNightPolygons] = useState(getNightPolygon());
+
+  // Atualiza o terminador a cada 60s (ou pode deixar só no mount se preferir)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNightPolygons(getNightPolygon());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (globeEl.current) {
       globeEl.current.pointOfView({ lat: 75, lng: 20, altitude: 2 }, 2000);
     }
-    // Atualiza a zona de noite a cada minuto
-    const updateNight = () => setNightArcs(getNightArcs());
-    updateNight();
-    const interval = setInterval(updateNight, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   const auroraArcs = getAuroraBelt(latMin, latMax);
@@ -76,19 +82,27 @@ export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
           height={400}
           globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
           backgroundColor="#0B1C24"
-          // Aurora
-          arcsData={[...auroraArcs, ...nightArcs]}
+          arcsData={auroraArcs}
           arcStartLat={d => d.startLat}
           arcStartLng={d => d.startLng}
           arcEndLat={d => d.endLat}
           arcEndLng={d => d.endLng}
           arcColor={d => d.color}
-          arcStroke={d => (d.color.startsWith("rgba") ? 30 : 2)}
-          arcDashLength={d => (d.color.startsWith("rgba") ? 1 : 0.5)}
-          arcDashGap={d => (d.color.startsWith("rgba") ? 0 : 0.5)}
+          arcStroke={2}
+          arcDashLength={0.5}
+          arcDashGap={0.5}
           arcDashInitialGap={Math.random()}
           arcDashAnimateTime={3000}
-          pointsData={[]}
+          pointsData={[]} // Remove pontos default
+
+          // Night terminator (grayline)
+          polygonsData={nightPolygons}
+          polygonLat={d => d.polygon.map(p => p[0])}
+          polygonLng={d => d.polygon.map(p => p[1])}
+          polygonAltitude={0.01}
+          polygonCapColor={d => d.color}
+          polygonSideColor={() => 'rgba(0,0,0,0)'}
+          polygonStrokeColor={() => 'rgba(0,0,0,0)'}
         />
       </div>
     </div>
