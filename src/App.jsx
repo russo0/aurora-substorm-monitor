@@ -42,11 +42,11 @@ export default function App() {
 
   return (
     <>
-      <h1 style={{ color: "#fff", fontSize: "40px", fontWeight: 900, background: "#000" }}>
-        TESTE BRANCO PURO
-      </h1>
-      <div className="min-h-screen flex flex-col items-center px-2 pb-10" style={{
-        background: "radial-gradient(ellipse at 50% 10%, #183153 0%, #0B1C24 100%)",
+        <h1 style={{ color: "#fff", fontSize: "40px", fontWeight: 900, background: "#000" }}>
+      TESTE BRANCO PURO
+    </h1>
+    <div className="min-h-screen flex flex-col items-center px-2 pb-10 text-white" style={{
+      background: "radial-gradient(ellipse at 50% 10%, #183153 0%, #0B1C24 100%)",
       }}>
         <div className="w-full max-w-2xl pt-8 flex flex-col items-center">
           <h1 className="text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-auroraGreen to-auroraPurple bg-clip-text text-transparent select-none">{t("Aurora Substorm Monitor")}</h1>
