@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import Globe from "react-globe.gl";
+import SunCalc from "suncalc";
 
-// Gera pontos de latitude para o "belt" da aurora
+// Função para gerar cinturão da aurora
 function getAuroraBelt(latMin = 65, latMax = 70, steps = 180) {
   const belts = [];
   for (let lat = latMin; lat < latMax; lat += 1) {
@@ -20,16 +21,45 @@ function getAuroraBelt(latMin = 65, latMax = 70, steps = 180) {
   return belts;
 }
 
+// Função para gerar a “noite” (lat, lng, color)
+function getNightArcs(steps = 180) {
+  const date = new Date();
+  // Calcula longitude solar (onde o sol está no zênite)
+  const gst = (date.getUTCHours() + date.getUTCMinutes()/60) * 15 - 180; // meridiano central
+  const arcs = [];
+  for (let i = 0; i < steps; i++) {
+    // Do -90° a +90° em latitude (hemisfério norte a sul)
+    const lat = (i * 180) / (steps - 1) - 90;
+    // Longitude oposta ao Sol (noite)
+    let lngNight = gst + 180;
+    if (lngNight > 180) lngNight -= 360;
+    arcs.push({
+      startLat: lat,
+      startLng: lngNight - 2,
+      endLat: lat,
+      endLng: lngNight + 2,
+      color: "rgba(0,0,0,0.40)"
+    });
+  }
+  return arcs;
+}
+
 export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
   const globeEl = useRef();
+  const [nightArcs, setNightArcs] = useState([]);
 
   useEffect(() => {
     if (globeEl.current) {
       globeEl.current.pointOfView({ lat: 75, lng: 20, altitude: 2 }, 2000);
     }
+    // Atualiza a zona de noite a cada minuto
+    const updateNight = () => setNightArcs(getNightArcs());
+    updateNight();
+    const interval = setInterval(updateNight, 60000);
+    return () => clearInterval(interval);
   }, []);
 
-  const arcsData = getAuroraBelt(latMin, latMax);
+  const auroraArcs = getAuroraBelt(latMin, latMax);
 
   return (
     <div className="w-full flex justify-center items-center my-4">
@@ -48,18 +78,19 @@ export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
           height={400}
           globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
           backgroundColor="#0B1C24"
-          arcsData={arcsData}
+          // Aurora
+          arcsData={[...auroraArcs, ...nightArcs]}
           arcStartLat={d => d.startLat}
           arcStartLng={d => d.startLng}
           arcEndLat={d => d.endLat}
           arcEndLng={d => d.endLng}
           arcColor={d => d.color}
-          arcStroke={2}
-          arcDashLength={0.5}
-          arcDashGap={0.5}
+          arcStroke={d => (d.color.startsWith("rgba") ? 30 : 2)}
+          arcDashLength={d => (d.color.startsWith("rgba") ? 1 : 0.5)}
+          arcDashGap={d => (d.color.startsWith("rgba") ? 0 : 0.5)}
           arcDashInitialGap={Math.random()}
           arcDashAnimateTime={3000}
-          pointsData={[]} // Para pins de webcam depois
+          pointsData={[]}
         />
       </div>
     </div>
