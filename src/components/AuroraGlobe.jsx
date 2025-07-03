@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import Globe from "react-globe.gl";
 
-// Gera o cinturão da aurora (latMin ~65, latMax ~70, pode ajustar!)
+// Cinturão auroral
 function getAuroraBelt(latMin = 65, latMax = 70, steps = 180) {
   const belts = [];
   for (let lat = latMin; lat < latMax; lat += 1) {
@@ -20,12 +20,10 @@ function getAuroraBelt(latMin = 65, latMax = 70, steps = 180) {
   return belts;
 }
 
-// Gera polígono do terminador noturno (grayline/terminator)
+// Terminador (grayline)
 function getNightPolygon(steps = 180) {
   const now = new Date();
-  // Longitude onde o sol está a pino (subsolar point)
   const solarLng = ((now.getUTCHours() + now.getUTCMinutes()/60) * 15) - 180;
-  // A noite cobre de solarLng+90 a solarLng-90 (metade do globo)
   const coords = [];
   for (let i = 0; i <= steps; i++) {
     const lat = (i * 180) / steps - 90;
@@ -40,7 +38,7 @@ function getNightPolygon(steps = 180) {
   return [
     {
       polygon: coords,
-      color: "rgba(0,0,0,0.33)", // Mais opacidade = mais escuro
+      color: "rgba(0,0,0,0.33)",
     }
   ];
 }
@@ -49,7 +47,6 @@ export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
   const globeEl = useRef();
   const [nightPolygons, setNightPolygons] = useState(getNightPolygon());
 
-  // Atualiza o terminador a cada 60s (ou pode deixar só no mount se preferir)
   useEffect(() => {
     const interval = setInterval(() => {
       setNightPolygons(getNightPolygon());
@@ -67,43 +64,40 @@ export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
 
   return (
     <div className="w-full flex justify-center items-center my-4">
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 400,
-          height: 400,
-          minHeight: 300,
-          position: "relative",
-        }}
-      >
-        <Globe
-          ref={globeEl}
-          width={400}
-          height={400}
-          globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
-          backgroundColor="#0B1C24"
-          arcsData={auroraArcs}
-          arcStartLat={d => d.startLat}
-          arcStartLng={d => d.startLng}
-          arcEndLat={d => d.endLat}
-          arcEndLng={d => d.endLng}
-          arcColor={d => d.color}
-          arcStroke={2}
-          arcDashLength={0.5}
-          arcDashGap={0.5}
-          arcDashInitialGap={Math.random()}
-          arcDashAnimateTime={3000}
-          pointsData={[]} // Remove pontos default
-
-          // Night terminator (grayline)
-          polygonsData={nightPolygons}
-          polygonLat={d => d.polygon.map(p => p[0])}
-          polygonLng={d => d.polygon.map(p => p[1])}
-          polygonAltitude={0.01}
-          polygonCapColor={d => d.color}
-          polygonSideColor={() => 'rgba(0,0,0,0)'}
-          polygonStrokeColor={() => 'rgba(0,0,0,0)'}
-        />
+      <div style={{
+        width: "100%",
+        maxWidth: 400,
+        height: 400,
+        minHeight: 300,
+        position: "relative"
+      }}>
+        {Array.isArray(nightPolygons) && (
+          <Globe
+            ref={globeEl}
+            width={400}
+            height={400}
+            globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+            backgroundColor="#0B1C24"
+            arcsData={auroraArcs}
+            arcStartLat={d => d.startLat}
+            arcStartLng={d => d.startLng}
+            arcEndLat={d => d.endLat}
+            arcEndLng={d => d.endLng}
+            arcColor={d => d.color}
+            arcStroke={2}
+            arcDashLength={0.5}
+            arcDashGap={0.5}
+            arcDashInitialGap={Math.random()}
+            arcDashAnimateTime={3000}
+            pointsData={[]}
+            polygonsData={nightPolygons}
+            polygonPoints={d => d.polygon}
+            polygonCapColor={d => d.color}
+            polygonSideColor={() => 'rgba(0,0,0,0)'}
+            polygonStrokeColor={() => 'rgba(0,0,0,0)'}
+            polygonAltitude={0.01}
+          />
+        )}
       </div>
     </div>
   );
