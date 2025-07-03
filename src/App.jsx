@@ -24,7 +24,6 @@ function getColor(type, value) {
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  // *** DADOS DEMO PARA TESTE VISUAL ***
   const [data] = useState({
     bz: -5.1,
     wind: 520,
@@ -39,7 +38,6 @@ export default function App() {
     ],
     time: "--"
   });
-  // *******************************
   const [lastUpdate] = useState("agora");
 
   return (
@@ -81,23 +79,19 @@ export default function App() {
               color={getColor("kp", data.kp)}
             />
           </div>
-          {/* Alerta visual */}
           {(data.bz < -2 && data.wind > 400) && (
             <div className="w-full flex flex-col items-center bg-auroraPurple/80 rounded-xl p-4 mb-2 animate-pulse shadow-lg">
               <div className="text-xl font-bold tracking-wider text-white">{t("ALERT!")}</div>
               <div className="font-medium text-white">{t("Alert! High chance of substorm!")}</div>
             </div>
           )}
-          {/* Chance */}
           <div className="mb-3 text-lg flex gap-2 items-center text-white">
             <span className="text-white">{t("Chance of Substorm")}:</span>
             <span className="font-semibold text-xl text-white">
               {t(getChance(data.bz, data.wind, data.kp))}
             </span>
           </div>
-          {/* Gráfico Bz */}
           <BzChart data={data.bzHistory} />
-          {/* Última atualização */}
           <div className="mt-2 text-xs text-white">{t("Last update")}: {lastUpdate ?? "--"}</div>
         </div>
       </div>
