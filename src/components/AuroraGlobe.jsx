@@ -24,17 +24,28 @@ export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
   const globeEl = useRef();
 
   useEffect(() => {
-    // Ajusta foco inicial do globo para o Polo Norte
-    globeEl.current.pointOfView({ lat: 75, lng: 20, altitude: 2 }, 2000);
+    if (globeEl.current) {
+      globeEl.current.pointOfView({ lat: 75, lng: 20, altitude: 2 }, 2000);
+    }
   }, []);
 
   const arcsData = getAuroraBelt(latMin, latMax);
 
   return (
-    <div className="w-full flex justify-center">
-      <div style={{ width: "400px", height: "400px" }}>
+    <div className="w-full flex justify-center items-center my-4">
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 400,
+          height: 400,
+          minHeight: 300,
+          position: "relative",
+        }}
+      >
         <Globe
           ref={globeEl}
+          width={400}
+          height={400}
           globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
           backgroundColor="#0B1C24"
           arcsData={arcsData}
@@ -48,8 +59,7 @@ export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
           arcDashGap={0.5}
           arcDashInitialGap={Math.random()}
           arcDashAnimateTime={3000}
-          // Remove pontinhos default
-          pointsData={[]}
+          pointsData={[]} // Para pins de webcam depois
         />
       </div>
     </div>
