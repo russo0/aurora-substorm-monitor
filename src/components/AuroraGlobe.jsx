@@ -46,7 +46,7 @@ export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
           ref={globeEl}
           width={400}
           height={400}
-          globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
+          globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
           backgroundColor="#0B1C24"
           arcsData={arcsData}
           arcStartLat={d => d.startLat}
