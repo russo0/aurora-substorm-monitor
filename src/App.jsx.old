@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import "./i18n";
 import { useTranslation } from "react-i18next";
 import DataCard from "./components/DataCard";
@@ -31,68 +31,55 @@ export default function App() {
     time: "--"
   });
   const [lastUpdate, setLastUpdate] = useState("--");
-  const intervalRef = useRef(null);
 
-  // fetchAll agora é memoizado (useCallback) para uso no botão
-  const fetchAll = useCallback(async () => {
-    try {
-      // 1. BZ (IMF)
-      const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
-      const magArr = await magRes.json();
-      const magHeader = magArr[0];
-      const bzIndex = magHeader.indexOf("bz_gsm");
-      const timeIndex = magHeader.indexOf("time_tag");
-      const bzHistory = magArr.slice(1).map(row => ({
-        time: row[timeIndex]?.slice(11, 16),
-        bz: Number(row[bzIndex])
-      }));
-      const lastMag = magArr[magArr.length - 1];
-      const bz = Number(lastMag[bzIndex]);
-      const magTime = lastMag[timeIndex];
-
-      // 2. Solar Wind
-      const plasmaRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json");
-      const plasmaArr = await plasmaRes.json();
-      const plasmaHeader = plasmaArr[0];
-      const speedIndex = plasmaHeader.indexOf("speed");
-      const lastPlasma = plasmaArr[plasmaArr.length - 1];
-      const wind = Number(lastPlasma[speedIndex]);
-
-      // 3. Kp
-      const kpRes = await fetch("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json");
-      const kpArr = await kpRes.json();
-      const lastKp = kpArr[kpArr.length - 1];
-      const kp = Number(lastKp.kp_index);
-
-      setData({
-        bz,
-        wind,
-        kp,
-        bzHistory,
-        time: magTime
-      });
-      setLastUpdate(new Date().toLocaleTimeString());
-    } catch (err) {
-      setLastUpdate("erro");
-    }
-  }, []);
-
-  // Atualização automática a cada 1min (60000ms)
   useEffect(() => {
-    fetchAll(); // busca ao montar
-    intervalRef.current = setInterval(fetchAll, 60000);
-    return () => clearInterval(intervalRef.current);
-  }, [fetchAll]);
+    async function fetchAll() {
+      try {
+        // 1. BZ (IMF)
+        const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
+        const magArr = await magRes.json();
+        const magHeader = magArr[0];
+        const bzIndex = magHeader.indexOf("bz_gsm");
+        const timeIndex = magHeader.indexOf("time_tag");
+        const bzHistory = magArr.slice(1).map(row => ({
+          time: row[timeIndex]?.slice(11, 16),
+          bz: Number(row[bzIndex])
+        }));
+        const lastMag = magArr[magArr.length - 1];
+        const bz = Number(lastMag[bzIndex]);
+        const magTime = lastMag[timeIndex];
 
-  // Handler para botão de idioma
-  const handleLanguageSwitch = () => {
-    i18n.changeLanguage(i18n.language === "en" ? "pt" : "en");
-  };
+        // 2. Solar Wind
+        const plasmaRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json");
+        const plasmaArr = await plasmaRes.json();
+        const plasmaHeader = plasmaArr[0];
+        const speedIndex = plasmaHeader.indexOf("speed");
+        const lastPlasma = plasmaArr[plasmaArr.length - 1];
+        const wind = Number(lastPlasma[speedIndex]);
 
-  // Handler para botão de update manual
-  const handleManualUpdate = () => {
+        // 3. Kp
+        const kpRes = await fetch("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json");
+        const kpArr = await kpRes.json();
+        const lastKp = kpArr[kpArr.length - 1];
+        const kp = Number(lastKp.kp_index);
+
+        setData({
+          bz,
+          wind,
+          kp,
+          bzHistory,
+          time: magTime
+        });
+        setLastUpdate(new Date().toLocaleTimeString());
+      } catch (err) {
+        setLastUpdate("erro");
+      }
+    }
+
     fetchAll();
-  };
+    const interval = setInterval(fetchAll, 120000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center px-2 pb-10" style={{
@@ -103,15 +90,9 @@ export default function App() {
         <div className="flex gap-2 mb-6">
           <button
             className="text-sm bg-[#161f27] hover:bg-auroraPurple hover:text-white rounded-lg px-3 py-1 text-white border border-white"
-            onClick={handleLanguageSwitch}
+            onClick={() => i18n.changeLanguage(i18n.language === "en" ? "pt" : "en")}
           >
             {t("Trocar idioma")}
-          </button>
-          <button
-            className="text-sm bg-[#183153] hover:bg-auroraGreen hover:text-black rounded-lg px-3 py-1 text-white border border-white"
-            onClick={handleManualUpdate}
-          >
-            {t("Atualizar agora")}
           </button>
         </div>
         <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
