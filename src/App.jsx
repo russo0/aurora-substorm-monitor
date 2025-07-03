@@ -76,7 +76,6 @@ export default function App() {
       setLastUpdate("erro");
     }
   }, []);
-<AuroraGlobe latMin={65} latMax={70} />
 
   useEffect(() => {
     fetchAll();
@@ -98,6 +97,8 @@ export default function App() {
     }}>
       <div className="w-full max-w-2xl pt-8 flex flex-col items-center">
         <h1 className="text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-auroraGreen to-auroraPurple bg-clip-text text-transparent select-none">{t("Monitor de Subtempestade de Aurora")}</h1>
+	{/* GLOBO AQUI */}
+     	 <AuroraGlobe latMin={65} latMax={70} />
         {/* Só o botão de idioma aqui em cima */}
         <div className="flex gap-2 mb-6">
           <button
