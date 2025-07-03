@@ -22,27 +22,25 @@ function getAuroraBelt(latMin = 65, latMax = 70, steps = 180) {
 }
 
 // Função para gerar a “noite” (lat, lng, color)
-function getNightArcs(steps = 180) {
+function getNightArcs(steps = 360) {
   const date = new Date();
-  // Calcula longitude solar (onde o sol está no zênite)
-  const gst = (date.getUTCHours() + date.getUTCMinutes()/60) * 15 - 180; // meridiano central
-  const arcs = [];
+  const solarLng = ((date.getUTCHours() + date.getUTCMinutes()/60) * 15) - 180;
+  const nightArcs = [];
   for (let i = 0; i < steps; i++) {
-    // Do -90° a +90° em latitude (hemisfério norte a sul)
     const lat = (i * 180) / (steps - 1) - 90;
-    // Longitude oposta ao Sol (noite)
-    let lngNight = gst + 180;
-    if (lngNight > 180) lngNight -= 360;
-    arcs.push({
+    const lngStart = solarLng - 90;
+    const lngEnd = solarLng + 90;
+    nightArcs.push({
       startLat: lat,
-      startLng: lngNight - 2,
+      startLng: lngStart,
       endLat: lat,
-      endLng: lngNight + 2,
-      color: "rgba(0,0,0,0.40)"
+      endLng: lngEnd,
+      color: "rgba(0,0,0,0.23)" // sombra sutil!
     });
   }
-  return arcs;
+  return nightArcs;
 }
+
 
 export default function AuroraGlobe({ latMin = 65, latMax = 70 }) {
   const globeEl = useRef();
