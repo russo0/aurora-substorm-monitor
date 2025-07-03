@@ -33,7 +33,6 @@ export default function App() {
   const [lastUpdate, setLastUpdate] = useState("--");
   const intervalRef = useRef(null);
 
-  // fetchAll agora é memoizado (useCallback) para uso no botão
   const fetchAll = useCallback(async () => {
     try {
       // 1. BZ (IMF)
@@ -77,19 +76,16 @@ export default function App() {
     }
   }, []);
 
-  // Atualização automática a cada 1min (60000ms)
   useEffect(() => {
-    fetchAll(); // busca ao montar
+    fetchAll();
     intervalRef.current = setInterval(fetchAll, 60000);
     return () => clearInterval(intervalRef.current);
   }, [fetchAll]);
 
-  // Handler para botão de idioma
   const handleLanguageSwitch = () => {
     i18n.changeLanguage(i18n.language === "en" ? "pt" : "en");
   };
 
-  // Handler para botão de update manual
   const handleManualUpdate = () => {
     fetchAll();
   };
@@ -100,18 +96,13 @@ export default function App() {
     }}>
       <div className="w-full max-w-2xl pt-8 flex flex-col items-center">
         <h1 className="text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-auroraGreen to-auroraPurple bg-clip-text text-transparent select-none">{t("Monitor de Subtempestade de Aurora")}</h1>
+        {/* Só o botão de idioma aqui em cima */}
         <div className="flex gap-2 mb-6">
           <button
             className="text-sm bg-[#161f27] hover:bg-auroraPurple hover:text-white rounded-lg px-3 py-1 text-white border border-white"
             onClick={handleLanguageSwitch}
           >
             {t("Trocar idioma")}
-          </button>
-          <button
-            className="text-sm bg-[#183153] hover:bg-auroraGreen hover:text-black rounded-lg px-3 py-1 text-white border border-white"
-            onClick={handleManualUpdate}
-          >
-            {t("Atualizar agora")}
           </button>
         </div>
         <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -146,7 +137,17 @@ export default function App() {
             {t(getChance(data.bz, data.wind, data.kp))}
           </span>
         </div>
+        {/* Gráfico */}
         <BzChart data={data.bzHistory} />
+        {/* Botão de atualização abaixo do gráfico */}
+        <div className="mt-4 mb-4 w-full flex justify-center">
+          <button
+            className="text-sm bg-[#183153] hover:bg-auroraGreen hover:text-black rounded-lg px-3 py-1 text-white border border-white transition"
+            onClick={handleManualUpdate}
+          >
+            {t("Atualizar agora")}
+          </button>
+        </div>
         <div className="mt-2 text-xs text-white">{t("Última atualização")}: {lastUpdate ?? "--"}</div>
       </div>
     </div>
