@@ -3,7 +3,6 @@ import "./i18n";
 import { useTranslation } from "react-i18next";
 import DataCard from "./components/DataCard";
 import BzChart from "./components/BzChart";
-import { playAlertSound } from "./utils/alertSound";
 
 function getChance(bz, wind, kp) {
   if (bz < -2 && wind > 400 && kp >= 4) return "Alta";
@@ -33,56 +32,36 @@ export default function App() {
   });
   const [lastUpdate, setLastUpdate] = useState("--");
 
-  useEffect(() => {
-    async function fetchAll() {
-      try {
-        // 1. Busca dados magnéticos (BZ)
-        const magRes = await fetch("https://proxy-noaa.russosec.workers.dev/products/solar-wind/mag-1-minute.json");
-        const magArr = await magRes.json();
-        // magArr é array de arrays. Header: ["time_tag", ..., "bz_gsm", ...]
-        const header = magArr[0];
-        const bzIndex = header.indexOf("bz_gsm");
-        const timeIndex = header.indexOf("time_tag");
-        // Últimos 6h = 360 pontos (se 1 por minuto)
-        const bzHistory = magArr.slice(-360).map(row => ({
-          time: row[timeIndex]?.slice(11, 16), // "HH:MM"
-          bz: Number(row[bzIndex]),
-        }));
-        const lastMag = magArr[magArr.length - 1];
-        const bz = Number(lastMag[bzIndex]);
-        const magTime = lastMag[timeIndex];
+useEffect(() => {
+  async function fetchAll() {
+    try {
+      // 1. Busca BZ
+      const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
+      const magArr = await magRes.json();
+      console.log("MAG JSON", magArr);
 
-        // 2. Busca Solar Wind (velocidade)
-        const plasmaRes = await fetch("https://proxy-noaa.russosec.workers.dev/products/solar-wind/plasma-1-minute.json");
-        const plasmaArr = await plasmaRes.json();
-        const pHeader = plasmaArr[0];
-        const speedIndex = pHeader.indexOf("speed");
-        const lastPlasma = plasmaArr[plasmaArr.length - 1];
-        const wind = Number(lastPlasma[speedIndex]);
+      // 2. Busca Solar Wind
+      const plasmaRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json");
+      const plasmaArr = await plasmaRes.json();
+      console.log("PLASMA JSON", plasmaArr);
 
-        // 3. Busca KP
-        const kpRes = await fetch("https://proxy-noaa.russosec.workers.dev/json/planetary_k_index_1m.json");
-        const kpArr = await kpRes.json();
-        // kpArr: array de objetos, pegue o último
-        const lastKp = kpArr[kpArr.length - 1];
-        const kp = Number(lastKp.kp_index);
+      // 3. Busca KP
+      const kpRes = await fetch("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json");
+      const kpArr = await kpRes.json();
+      console.log("KP JSON", kpArr);
 
-        setData({
-          bz,
-          wind,
-          kp,
-          bzHistory,
-          time: magTime,
-        });
-        setLastUpdate(new Date().toLocaleTimeString());
-      } catch (err) {
-        // Em caso de erro, mantém os valores anteriores
-        setLastUpdate("erro");
-      }
+      // ... (você pode manter o restante igual)
+    } catch (err) {
+      setLastUpdate("erro");
+      console.error("Fetch failed!", err);
     }
+  }
+  fetchAll();
+  const interval = setInterval(fetchAll, 120000);
+  return () => clearInterval(interval);
+}, []);
 
     fetchAll();
-    // Atualiza a cada 2 minutos
     const interval = setInterval(fetchAll, 120000);
     return () => clearInterval(interval);
   }, []);
