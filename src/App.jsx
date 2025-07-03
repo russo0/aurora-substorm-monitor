@@ -1,3 +1,4 @@
+import AuroraGlobe from "./components/AuroraGlobe";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import "./i18n";
 import { useTranslation } from "react-i18next";
@@ -75,6 +76,7 @@ export default function App() {
       setLastUpdate("erro");
     }
   }, []);
+<AuroraGlobe latMin={65} latMax={70} />
 
   useEffect(() => {
     fetchAll();

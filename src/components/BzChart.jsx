@@ -7,7 +7,7 @@ export default function BzChart({ data }) {
 
   return (
     <div className="w-full p-2 rounded-2xl bg-[#161f27] mt-4 shadow-md">
-      <div className="text-sm mb-2 text-auroraGreen">{t("BZ")} ({t("Last 6h")})</div>
+      <div className="text-sm mb-2 text-auroraGreen">{t("Bz")} ({t("Last 6h")})</div>
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={data}>
           <XAxis dataKey="time" fontSize={12} />
