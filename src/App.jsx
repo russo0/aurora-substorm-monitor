@@ -1,3 +1,6 @@
+<h1 style={{ color: "#fff", fontSize: "40px", fontWeight: 900, background: "#000" }}>
+  TESTE BRANCO PURO
+</h1>
 import React, { useState } from "react";
 import "./i18n";
 import { useTranslation } from "react-i18next";
