@@ -1,26 +1,26 @@
 import React from "react";
 
-const WEBCAMS = [
+const webcams = [
   {
-    name: "Abisko Aurora Sky Station",
+    title: "Abisko Aurora Sky Station",
+    country: "Suécia",
+    img: "https://www.auroraskystation.se/contentassets/76877e0e987ecd9659e4e951f2bfaec5/webcam_large.jpg",
     url: "https://www.auroraskystation.se/live/",
-    img: "https://www.auroraskystation.se/live/image.jpg", // troque para uma imagem estática se tiver
-    country: "Suécia",
   },
   {
-    name: "Tromsø – Noruega",
-    url: "https://www.norwegianweather.com/webcam/tromso",
-    img: "https://www.norwegianweather.com/webcam/tromso/image.jpg",
+    title: "Tromsø — Noruega",
     country: "Noruega",
+    img: "https://www.auroralivestream.com/static/media/thumb-tromso.eba95321.jpg",
+    url: "https://www.auroralivestream.com/aurora-live",
   },
   {
-    name: "Kiruna AllSkyCam",
-    url: "https://www.allskaicam.com/kiruna",
-    img: "https://www.allskaicam.com/kiruna/preview.jpg",
+    title: "Kiruna AllSkyCam",
     country: "Suécia",
-  },
-  // Adicione outras webcams legais!
+    img: "https://www.allskycam.com/kiruna/preview.jpg",
+    url: "https://www.allskycam.com/kiruna/",
+  }
 ];
+
 
 export default function WebcamGallery() {
   return (
