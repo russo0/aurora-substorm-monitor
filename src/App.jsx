@@ -1,9 +1,10 @@
-import AuroraGlobe from "./components/AuroraGlobe";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import "./i18n";
 import { useTranslation } from "react-i18next";
 import DataCard from "./components/DataCard";
 import BzChart from "./components/BzChart";
+import WebcamGallery from "./components/WebcamGallery";
+import AuroraGlobe from "./components/AuroraGlobe"; // Comente esta linha se não quiser o globo
 
 function getChance(bz, wind, kp) {
   if (bz < -2 && wind > 400 && kp >= 4) return "Alta";
@@ -35,55 +36,55 @@ export default function App() {
   const intervalRef = useRef(null);
 
   const fetchAll = useCallback(async () => {
-  try {
-    // 1. BZ (IMF)
-    const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
-    const magArr = await magRes.json();
-    const magHeader = magArr[0];
-    const bzIndex = magHeader.indexOf("bz_gsm");
-    const timeIndex = magHeader.indexOf("time_tag");
-    const bzHistory = magArr.slice(1).map(row => ({
-      time: row[timeIndex]?.slice(11, 16),
-      bz: Number(row[bzIndex])
-    }));
-    const lastMag = magArr[magArr.length - 1];
-    const bz = Number(lastMag[bzIndex]);
-    const magTime = lastMag[timeIndex];
+    try {
+      // 1. BZ (IMF)
+      const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
+      const magArr = await magRes.json();
+      const magHeader = magArr[0];
+      const bzIndex = magHeader.indexOf("bz_gsm");
+      const timeIndex = magHeader.indexOf("time_tag");
+      const bzHistory = magArr.slice(1).map(row => ({
+        time: row[timeIndex]?.slice(11, 16),
+        bz: Number(row[bzIndex])
+      }));
+      const lastMag = magArr[magArr.length - 1];
+      const bz = Number(lastMag[bzIndex]);
+      const magTime = lastMag[timeIndex];
 
-    // 2. Solar Wind
-    const plasmaRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json");
-    const plasmaArr = await plasmaRes.json();
-    const plasmaHeader = plasmaArr[0];
-    const speedIndex = plasmaHeader.indexOf("speed");
-    const lastPlasma = plasmaArr[plasmaArr.length - 1];
-    const wind = Number(lastPlasma[speedIndex]);
+      // 2. Solar Wind
+      const plasmaRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json");
+      const plasmaArr = await plasmaRes.json();
+      const plasmaHeader = plasmaArr[0];
+      const speedIndex = plasmaHeader.indexOf("speed");
+      const lastPlasma = plasmaArr[plasmaArr.length - 1];
+      const wind = Number(lastPlasma[speedIndex]);
 
-    // 3. Kp Index (sempre pega último valor real)
-    const kpRes = await fetch("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json");
-    const kpArr = await kpRes.json();
-    let kp = "--";
-    if (Array.isArray(kpArr) && kpArr.length > 0) {
-      for (let i = kpArr.length - 1; i >= 0; i--) {
-        const val = Number(kpArr[i].kp_index);
-        if (!isNaN(val) && val > 0) {
-          kp = val;
-          break;
+      // 3. Kp Index (pega último valor real, maior que 0)
+      const kpRes = await fetch("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json");
+      const kpArr = await kpRes.json();
+      let kp = "--";
+      if (Array.isArray(kpArr) && kpArr.length > 0) {
+        for (let i = kpArr.length - 1; i >= 0; i--) {
+          const val = Number(kpArr[i].kp_index);
+          if (!isNaN(val) && val > 0) {
+            kp = val;
+            break;
+          }
         }
       }
-    }
 
-    setData({
-      bz,
-      wind,
-      kp,
-      bzHistory,
-      time: magTime
-    });
-    setLastUpdate(new Date().toLocaleTimeString());
-  } catch (err) {
-    setLastUpdate("erro");
-  }
-}, []);
+      setData({
+        bz,
+        wind,
+        kp,
+        bzHistory,
+        time: magTime
+      });
+      setLastUpdate(new Date().toLocaleTimeString());
+    } catch (err) {
+      setLastUpdate("erro");
+    }
+  }, []);
 
   useEffect(() => {
     fetchAll();
@@ -104,10 +105,9 @@ export default function App() {
       background: "radial-gradient(ellipse at 50% 10%, #183153 0%, #0B1C24 100%)"
     }}>
       <div className="w-full max-w-2xl pt-8 flex flex-col items-center">
-        <h1 className="text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-auroraGreen to-auroraPurple bg-clip-text text-transparent select-none">{t("Monitor de Subtempestade de Aurora")}</h1>
-	{/* GLOBO AQUI */}
-     	 <AuroraGlobe latMin={65} latMax={70} />
-        {/* Só o botão de idioma aqui em cima */}
+        <h1 className="text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-auroraGreen to-auroraPurple bg-clip-text text-transparent select-none">
+          {t("Monitor de Subtempestade de Aurora")}
+        </h1>
         <div className="flex gap-2 mb-6">
           <button
             className="text-sm bg-[#161f27] hover:bg-auroraPurple hover:text-white rounded-lg px-3 py-1 text-white border border-white"
@@ -148,7 +148,6 @@ export default function App() {
             {t(getChance(data.bz, data.wind, data.kp))}
           </span>
         </div>
-        {/* Gráfico */}
         <BzChart data={data.bzHistory} />
         {/* Botão de atualização abaixo do gráfico */}
         <div className="mt-4 mb-4 w-full flex justify-center">
@@ -161,6 +160,10 @@ export default function App() {
         </div>
         <div className="mt-2 text-xs text-white">{t("Última atualização")}: {lastUpdate ?? "--"}</div>
       </div>
+      {/* Globo Aurora 3D (remova/comente se não quiser) */}
+      {/* <AuroraGlobe latMin={65} latMax={70} /> */}
+      {/* Galeria de Webcams */}
+      <WebcamGallery />
     </div>
   );
 }
