@@ -1,6 +1,6 @@
 import React from "react";
 
-const webcams = [
+const WEBCAMS = [
   {
     title: "Abisko Aurora Sky Station",
     country: "Suécia",
@@ -8,7 +8,7 @@ const webcams = [
     url: "https://www.auroraskystation.se/live/",
   },
   {
-    title: "Tromsø — Noruega",
+    title: "Tromsø – Noruega",
     country: "Noruega",
     img: "https://www.auroralivestream.com/static/media/thumb-tromso.eba95321.jpg",
     url: "https://www.auroralivestream.com/aurora-live",
@@ -16,44 +16,36 @@ const webcams = [
   {
     title: "Kiruna AllSkyCam",
     country: "Suécia",
-    img: "https://www.allskycam.com/kiruna/preview.jpg",
-    url: "https://www.allskycam.com/kiruna/",
-  }
+    img: "https://www.allsouthernsky.com/clients/kiruna.jpg", // Substituído pois original estava fora
+    url: "https://www.allsouthernsky.com/kiruna/",
+  },
 ];
-
 
 export default function WebcamGallery() {
   return (
-    <div className="w-full max-w-2xl mt-8 mb-12">
-      <h2 className="text-xl font-bold text-white mb-3">Webcams de Aurora ao Vivo</h2>
+    <div className="w-full max-w-5xl mx-auto mt-10">
+      <h2 className="text-2xl font-bold mb-4 text-white">Webcams de Aurora ao Vivo</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {WEBCAMS.map((cam, idx) => (
+        {WEBCAMS.map((webcam, idx) => (
           <a
-            href={cam.url}
             key={idx}
+            href={webcam.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-xl shadow-md overflow-hidden bg-[#161f27] hover:ring-2 ring-auroraGreen group transition"
-            title={cam.name}
+            className="rounded-2xl bg-[#131e28] shadow-md p-2 flex flex-col items-center hover:scale-105 transition-transform"
+            title={webcam.title}
           >
-            <div className="aspect-video w-full bg-[#23292e] flex items-center justify-center">
-              {cam.img ? (
-                <img
-                  src={cam.img}
-                  alt={cam.name}
-                  className="object-cover w-full h-full group-hover:scale-105 transition"
-                  loading="lazy"
-                  style={{ minHeight: 80, maxHeight: 120 }}
-                />
-              ) : (
-                <span className="text-white/60 text-sm">Imagem indisponível</span>
-              )}
-            </div>
-            <div className="p-2">
-              <div className="font-semibold text-white">{cam.name}</div>
-              <div className="text-xs text-gray-400">{cam.country}</div>
-              <div className="text-auroraGreen text-xs mt-1">Assistir ao vivo</div>
-            </div>
+            <img
+              src={webcam.img}
+              alt={webcam.title}
+              className="w-full h-44 object-cover rounded-lg mb-2"
+              loading="lazy"
+              style={{ background: "#222" }}
+              onError={e => { e.target.onerror = null; e.target.src = "https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg"; }}
+            />
+            <div className="font-semibold text-white text-center">{webcam.title}</div>
+            <div className="text-gray-400 text-sm">{webcam.country}</div>
+            <div className="mt-1 text-emerald-400 text-xs">Assistir ao vivo</div>
           </a>
         ))}
       </div>
