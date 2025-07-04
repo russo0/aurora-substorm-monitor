@@ -35,47 +35,55 @@ export default function App() {
   const intervalRef = useRef(null);
 
   const fetchAll = useCallback(async () => {
-    try {
-      // 1. BZ (IMF)
-      const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
-      const magArr = await magRes.json();
-      const magHeader = magArr[0];
-      const bzIndex = magHeader.indexOf("bz_gsm");
-      const timeIndex = magHeader.indexOf("time_tag");
-      const bzHistory = magArr.slice(1).map(row => ({
-        time: row[timeIndex]?.slice(11, 16),
-        bz: Number(row[bzIndex])
-      }));
-      const lastMag = magArr[magArr.length - 1];
-      const bz = Number(lastMag[bzIndex]);
-      const magTime = lastMag[timeIndex];
+  try {
+    // 1. BZ (IMF)
+    const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
+    const magArr = await magRes.json();
+    const magHeader = magArr[0];
+    const bzIndex = magHeader.indexOf("bz_gsm");
+    const timeIndex = magHeader.indexOf("time_tag");
+    const bzHistory = magArr.slice(1).map(row => ({
+      time: row[timeIndex]?.slice(11, 16),
+      bz: Number(row[bzIndex])
+    }));
+    const lastMag = magArr[magArr.length - 1];
+    const bz = Number(lastMag[bzIndex]);
+    const magTime = lastMag[timeIndex];
 
-      // 2. Solar Wind
-      const plasmaRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json");
-      const plasmaArr = await plasmaRes.json();
-      const plasmaHeader = plasmaArr[0];
-      const speedIndex = plasmaHeader.indexOf("speed");
-      const lastPlasma = plasmaArr[plasmaArr.length - 1];
-      const wind = Number(lastPlasma[speedIndex]);
+    // 2. Solar Wind
+    const plasmaRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json");
+    const plasmaArr = await plasmaRes.json();
+    const plasmaHeader = plasmaArr[0];
+    const speedIndex = plasmaHeader.indexOf("speed");
+    const lastPlasma = plasmaArr[plasmaArr.length - 1];
+    const wind = Number(lastPlasma[speedIndex]);
 
-      // 3. Kp
-      const kpRes = await fetch("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json");
-      const kpArr = await kpRes.json();
-      const lastKp = kpArr[kpArr.length - 1];
-      const kp = Number(lastKp.kp_index);
-
-      setData({
-        bz,
-        wind,
-        kp,
-        bzHistory,
-        time: magTime
-      });
-      setLastUpdate(new Date().toLocaleTimeString());
-    } catch (err) {
-      setLastUpdate("erro");
+    // 3. Kp Index (sempre pega último valor real)
+    const kpRes = await fetch("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json");
+    const kpArr = await kpRes.json();
+    let kp = "--";
+    if (Array.isArray(kpArr) && kpArr.length > 0) {
+      for (let i = kpArr.length - 1; i >= 0; i--) {
+        const val = Number(kpArr[i].kp_index);
+        if (!isNaN(val) && val > 0) {
+          kp = val;
+          break;
+        }
+      }
     }
-  }, []);
+
+    setData({
+      bz,
+      wind,
+      kp,
+      bzHistory,
+      time: magTime
+    });
+    setLastUpdate(new Date().toLocaleTimeString());
+  } catch (err) {
+    setLastUpdate("erro");
+  }
+}, []);
 
   useEffect(() => {
     fetchAll();
