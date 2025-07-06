@@ -1,7 +1,5 @@
-// src/components/WebcamGallery.jsx
-import React, { useState } from "react";
+import React from "react";
 
-// Lista de webcams do YouTube
 const WEBCAMS = [
   {
     title: "Abisko Aurora Sky Station",
@@ -15,74 +13,61 @@ const WEBCAMS = [
     url: "https://www.youtube.com/watch?v=j5xZYIS9d_0",
     videoId: "j5xZYIS9d_0",
   },
-  // Adicione mais webcams YouTube aqui!
+  // Adicione mais
 ];
 
-function WebcamCard({ webcam }) {
-  const [hover, setHover] = useState(false);
+function getYoutubeThumb(videoId) {
+  // YouTube sempre tem esse thumb!
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+}
 
+function WebcamCard({ webcam }) {
   return (
-    <div
-      className="relative rounded-2xl bg-[#131e28] shadow-md flex flex-col items-center p-2 cursor-pointer transition hover:scale-105"
+    <a
+      href={webcam.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="relative rounded-2xl bg-[#131e28] shadow-md flex flex-col items-center p-2 transition hover:scale-105"
       style={{
         width: 210,
-        minHeight: 170,
+        minHeight: 180,
         margin: "0.5rem",
-        border: hover ? "2px solid #32FF8F" : "2px solid transparent",
-        zIndex: hover ? 20 : 1,
+        border: "2px solid #32FF8F",
+        textDecoration: "none"
       }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      tabIndex={0}
+      title={`Assistir ${webcam.title} ao vivo`}
     >
       <div style={{ position: "relative", width: 210, height: 120 }}>
-        {/* Player sempre visível */}
-        <iframe
+        <img
+          src={getYoutubeThumb(webcam.videoId)}
+          alt={webcam.title}
           width="210"
           height="120"
-          src={`https://www.youtube.com/embed/${webcam.videoId}?autoplay=1&mute=1`}
-          frameBorder="0"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          title={webcam.title}
-          style={{ borderRadius: "12px" }}
+          style={{ borderRadius: "12px", objectFit: "cover" }}
         />
-        {/* Efeito de zoom/flutuante no hover */}
-        {hover && (
-          <div
-            className="absolute left-1/2 top-1/2 bg-black/90 border-2 border-auroraGreen rounded-xl shadow-2xl flex items-center justify-center"
-            style={{
-              width: 340,
-              height: 200,
-              zIndex: 100,
-              transform: "translate(-50%,-50%) scale(1.05)",
-              pointerEvents: "none",
-            }}
-          >
-            <iframe
-              width="340"
-              height="200"
-              src={`https://www.youtube.com/embed/${webcam.videoId}?autoplay=1&mute=1`}
-              frameBorder="0"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              title={webcam.title}
-              style={{ borderRadius: "16px" }}
-            />
-          </div>
-        )}
+        {/* Overlay "AO VIVO" */}
+        <span
+          style={{
+            position: "absolute",
+            top: 6,
+            left: 10,
+            background: "#FF3232",
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: "bold",
+            padding: "2px 8px",
+            borderRadius: "8px",
+            letterSpacing: 1,
+            zIndex: 2
+          }}
+        >
+          AO VIVO
+        </span>
       </div>
       <div className="mt-2 text-white text-sm font-semibold text-center">{webcam.title}</div>
       <div className="text-gray-400 text-xs">{webcam.country}</div>
-      <a
-        href={webcam.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-auroraGreen text-xs mt-1"
-      >
-        Assistir ao vivo
-      </a>
-    </div>
+      <div className="text-auroraGreen text-xs mt-1">Clique para assistir ao vivo</div>
+    </a>
   );
 }
 
