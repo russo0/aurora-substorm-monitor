@@ -2,16 +2,11 @@ import React from "react";
 
 const WEBCAMS = [
   {
-    title: "Abisko Aurora Sky Station",
+    title: "Abisko Aurora Live",
     country: "Suécia",
     url: "https://www.youtube.com/watch?v=o-dALODWYfg",
-    videoId: "F8Vuw0G4Gfk",
-  },
-  {
-    title: "Nordlys Observatory",
-    country: "Noruega",
-    url: "https://www.youtube.com/watch?v=j5xZYIS9d_0",
-    videoId: "j5xZYIS9d_0",
+    embed: true,
+    id: "o-dALODWYfg"
   },
   // Adicione mais
 ];
@@ -73,13 +68,37 @@ function WebcamCard({ webcam }) {
 
 export default function WebcamGallery() {
   return (
-    <div className="w-full max-w-4xl mx-auto mt-8 px-4">
-      <h2 className="text-xl font-bold text-white mb-2">Webcams do Ártico ao vivo</h2>
-      <div className="flex flex-wrap justify-center">
-        {WEBCAMS.map((webcam, idx) => (
-          <WebcamCard webcam={webcam} key={idx} />
-        ))}
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {WEBCAMS.map(cam =>
+        <div key={cam.id} className="rounded-2xl bg-[#181e28] shadow-md p-4 flex flex-col items-center">
+          <div className="w-full flex justify-center mb-2">
+            {cam.embed ? (
+              <iframe
+                width="320"
+                height="180"
+                src={`https://www.youtube.com/embed/${cam.id}?mute=1`}
+                title={cam.title}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="rounded-xl"
+              />
+            ) : (
+              <a href={cam.url} target="_blank" rel="noopener noreferrer">
+                <img
+                  src={`https://img.youtube.com/vi/${cam.id}/hqdefault.jpg`}
+                  alt={cam.title}
+                  className="w-64 h-36 object-cover rounded-xl mb-2"
+                />
+              </a>
+            )}
+          </div>
+          <div className="font-semibold text-lg text-white">{cam.title}</div>
+          <div className="text-auroraGreen text-xs mb-1">{cam.country}</div>
+          <a href={cam.url} target="_blank" rel="noopener noreferrer"
+             className="text-auroraGreen text-sm underline">Assistir ao vivo</a>
+        </div>
+      )}
     </div>
   );
 }
