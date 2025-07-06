@@ -8,6 +8,20 @@ const WEBCAMS = [
     embed: true,
     id: "o-dALODWYfg"
   },
+  {
+    title: "Abisko Aurora Live",
+    country: "Suécia",
+    url: "https://www.youtube.com/watch?v=o-dALODWYfg",
+    embed: true,
+    id: "o-dALODWYfg"
+  },
+  {
+    title: "Kilpisjärvi Aurora Live",
+    country: "Finlândia",
+    url: "https://www.youtube.com/watch?v=ccTVAhJU5lg",
+    embed: true,
+    id: "ccTVAhJU5lg"
+  },	
   // Adicione mais
 ];
 
