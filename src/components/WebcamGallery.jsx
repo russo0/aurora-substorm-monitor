@@ -6,7 +6,7 @@ const WEBCAMS = [
   {
     title: "Abisko Aurora Sky Station",
     country: "Suécia",
-    url: "https://www.youtube.com/watch?v=F8Vuw0G4Gfk",
+    url: "https://www.youtube.com/watch?v=o-dALODWYfg",
     videoId: "F8Vuw0G4Gfk",
   },
   {
