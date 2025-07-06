@@ -14,6 +14,13 @@ const WEBCAMS = [
     url: "https://www.youtube.com/watch?v=ccTVAhJU5lg",
     embed: true,
     id: "ccTVAhJU5lg"
+  },
+ {
+    title: "Rovaniemi Aurora Live",
+    country: "Finlândia",
+    url: "https://www.youtube.com/watch?v=AvKdtZIb-6c",
+    embed: true,
+    id: "ccTVAhJU5lg"
   },	
   // Adicione mais
 ];
