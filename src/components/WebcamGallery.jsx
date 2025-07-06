@@ -1,14 +1,7 @@
 import React from "react";
 
 const WEBCAMS = [
-  {
-    title: "Abisko Aurora Live",
-    country: "Suécia",
-    url: "https://www.youtube.com/watch?v=o-dALODWYfg",
-    embed: true,
-    id: "o-dALODWYfg"
-  },
-  {
+   {
     title: "Abisko Aurora Live",
     country: "Suécia",
     url: "https://www.youtube.com/watch?v=o-dALODWYfg",
