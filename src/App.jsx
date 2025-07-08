@@ -6,6 +6,41 @@ import BzChart from "./components/BzChart";
 import WebcamGallery from "./components/WebcamGallery";
 // import AuroraGlobe from "./components/AuroraGlobe"; // Ative se quiser o globo
 
+// Hook para detectar nova versão do app PWA
+function usePWANewVersion() {
+  const [waitingWorker, setWaitingWorker] = useState(null);
+  const [showBanner, setShowBanner] = useState(false);
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(reg => {
+          reg.onupdatefound = () => {
+            const newWorker = reg.installing || reg.waiting;
+            if (newWorker && newWorker.state === "installed") {
+              setWaitingWorker(newWorker);
+              setShowBanner(true);
+            }
+          };
+          if (reg.waiting) {
+            setWaitingWorker(reg.waiting);
+            setShowBanner(true);
+          }
+        });
+      });
+    }
+  }, []);
+
+  const updateApp = () => {
+    if (waitingWorker) {
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      window.location.reload();
+    }
+  };
+
+  return showBanner ? updateApp : null;
+}
+
 // Critério melhorado de subtempestade
 function getChance(bzHistory, wind, bt) {
   let countBz6 = 0, countBz7 = 0, countBz4 = 0;
@@ -14,8 +49,6 @@ function getChance(bzHistory, wind, bt) {
     if (item.bz <= -6) countBz6++;
     if (item.bz <= -7) countBz7++;
   });
-
-  // Última 1h: bzHistory tem 60 pontos (1 por min)
   if ((countBz6 >= 30 && wind >= 500 && bt >= 10) ||
       (countBz7 >= 15 && bt >= 10)) {
     return "Alta";
@@ -55,41 +88,40 @@ export default function App() {
   const [lastUpdate, setLastUpdate] = useState("--");
   const intervalRef = useRef(null);
 
+  // Detecta nova versão do app!
+  const updateApp = usePWANewVersion();
+
   const fetchAll = useCallback(async () => {
     try {
       // 1. BZ (IMF) + Bt (magnitude)
-     // Fetch and parse mag data
-// 1. BZ (IMF) + Bt (magnitude)
-const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
-const magArr = await magRes.json();
-const magHeader = magArr[0];
-const bzIndex = magHeader.indexOf("bz_gsm");
-const btIndex = magHeader.indexOf("bt");
-const timeIndex = magHeader.indexOf("time_tag");
+      const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
+      const magArr = await magRes.json();
+      const magHeader = magArr[0];
+      const bzIndex = magHeader.indexOf("bz_gsm");
+      const btIndex = magHeader.indexOf("bt");
+      const timeIndex = magHeader.indexOf("time_tag");
 
-const dataRows = magArr.slice(1); // SKIP HEADER!
-const lastMag = dataRows[dataRows.length - 1];
-const bz = Number(lastMag[bzIndex]);
-const bt = Number(lastMag[btIndex]);
-const magTime = lastMag[timeIndex];
+      const lastMag = magArr[magArr.length - 1];
+      const bz = Number(lastMag[bzIndex]);
+      const bt = Number(lastMag[btIndex]);
+      const magTime = lastMag[timeIndex];
 
-// Calculate last 6h window
-const now = new Date(magTime);
-const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-let sixHoursAgoIndex = 0;
-for (let i = dataRows.length - 1; i > 0; i--) {
-  const rowTimeStr = dataRows[i][timeIndex];
-  const rowTime = rowTimeStr ? new Date(rowTimeStr) : null;
-  if (rowTime && rowTime <= sixHoursAgo) {
-    sixHoursAgoIndex = i;
-    break;
-  }
-}
-const bzHistory = dataRows.slice(sixHoursAgoIndex).map(row => ({
-  time: row[timeIndex]?.slice(11, 16),
-  bz: Number(row[bzIndex]),
-  bt: Number(row[btIndex])
-}));
+      // Últimas 6h
+      const now = new Date(lastMag[timeIndex]);
+      const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      let sixHoursAgoIndex = 1;
+      for (let i = magArr.length - 1; i > 0; i--) {
+        const rowTime = new Date(magArr[i][timeIndex]);
+        if (rowTime <= sixHoursAgo) {
+          sixHoursAgoIndex = i;
+          break;
+        }
+      }
+      const bzHistory = magArr.slice(sixHoursAgoIndex).map(row => ({
+        time: row[timeIndex]?.slice(11, 16),
+        bz: Number(row[bzIndex]),
+        bt: Number(row[btIndex])
+      }));
 
       // 2. Solar Wind
       const plasmaRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json");
@@ -141,13 +173,25 @@ const bzHistory = dataRows.slice(sixHoursAgoIndex).map(row => ({
     fetchAll();
   };
 
-  // ** Novo cálculo da chance: **
   const chance = getChance(data.bzHistory, data.wind, data.bt);
 
   return (
     <div className="min-h-screen flex flex-col items-center px-2 pb-10" style={{
       background: "radial-gradient(ellipse at 50% 10%, #183153 0%, #0B1C24 100%)"
     }}>
+      {/* Banner de nova versão */}
+      {updateApp && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-auroraGreen text-black px-6 py-3 rounded-xl shadow-xl border-2 border-white flex items-center gap-4 animate-pulse">
+          <span>Nova versão do app disponível.</span>
+          <button
+            className="bg-auroraPurple text-white px-3 py-1 rounded-lg font-semibold shadow hover:bg-[#131e28]"
+            onClick={updateApp}
+          >
+            Atualizar agora
+          </button>
+        </div>
+      )}
+
       <div className="w-full max-w-2xl pt-8 flex flex-col items-center">
         <h1 className="text-2xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-auroraGreen to-auroraPurple bg-clip-text text-transparent select-none">
           {t("Monitor de Subtempestade de Aurora")}
