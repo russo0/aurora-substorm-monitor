@@ -70,7 +70,7 @@ function WebcamCard({ webcam }) {
             />
             <span
               style={{
-                position: "absolute",
+                position: "relative",
                 top: 12,
                 left: 20,
                 background: "#FF3232",
