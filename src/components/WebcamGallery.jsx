@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 const WEBCAMS = [
   {
@@ -42,6 +42,26 @@ function getYoutubeUrl(videoId) {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
+function ImageThumb({ src, alt }) {
+  const [errored, setErrored] = useState(false);
+  if (errored) {
+    return <div style={{
+      width: 210, height: 120, borderRadius: 12, background: "#333",
+      color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center"
+    }}>Preview indisponível</div>;
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      width="210"
+      height="120"
+      style={{ borderRadius: "12px", objectFit: "cover" }}
+      onError={() => setErrored(true)}
+    />
+  );
+}
+
 export default function WebcamGallery() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -49,20 +69,20 @@ export default function WebcamGallery() {
         <div key={cam.id} className="rounded-2xl bg-[#181e28] shadow-md p-4 flex flex-col items-center">
           <div className="w-full flex justify-center mb-2">
             {cam.type === "youtube" ? (
-              <a href={getYoutubeUrl(cam.id)} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={getYoutubeThumb(cam.id)}
-                  alt={cam.title}
-                  className="w-64 h-36 object-cover rounded-xl mb-2"
-                />
-              </a>
+              // Embed YouTube player com autoplay bloqueado e sem sugestões
+              <iframe
+                width="320"
+                height="180"
+                src={`https://www.youtube.com/embed/${cam.id}?mute=1&autoplay=0&rel=0`}
+                title={cam.title}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="rounded-xl"
+              />
             ) : (
               <a href={cam.url} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={cam.url + "?" + Date.now()} // previne cache, força atualização ao abrir
-                  alt={cam.title}
-                  className="w-64 h-36 object-cover rounded-xl mb-2"
-                />
+                <ImageThumb src={cam.url + "?" + Date.now()} alt={cam.title} />
               </a>
             )}
           </div>
