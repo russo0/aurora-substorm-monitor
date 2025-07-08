@@ -59,6 +59,7 @@ export default function App() {
     try {
       // 1. BZ (IMF) + Bt (magnitude)
      // Fetch and parse mag data
+// 1. BZ (IMF) + Bt (magnitude)
 const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
 const magArr = await magRes.json();
 const magHeader = magArr[0];
@@ -66,23 +67,25 @@ const bzIndex = magHeader.indexOf("bz_gsm");
 const btIndex = magHeader.indexOf("bt");
 const timeIndex = magHeader.indexOf("time_tag");
 
-const lastMag = magArr[magArr.length - 1];
+const dataRows = magArr.slice(1); // SKIP HEADER!
+const lastMag = dataRows[dataRows.length - 1];
 const bz = Number(lastMag[bzIndex]);
 const bt = Number(lastMag[btIndex]);
 const magTime = lastMag[timeIndex];
 
 // Calculate last 6h window
-const now = new Date(lastMag[timeIndex]);
+const now = new Date(magTime);
 const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-let sixHoursAgoIndex = 1;
-for (let i = magArr.length - 1; i > 0; i--) {
-  const rowTime = new Date(magArr[i][timeIndex]);
-  if (rowTime <= sixHoursAgo) {
+let sixHoursAgoIndex = 0;
+for (let i = dataRows.length - 1; i > 0; i--) {
+  const rowTimeStr = dataRows[i][timeIndex];
+  const rowTime = rowTimeStr ? new Date(rowTimeStr) : null;
+  if (rowTime && rowTime <= sixHoursAgo) {
     sixHoursAgoIndex = i;
     break;
   }
 }
-const bzHistory = magArr.slice(sixHoursAgoIndex).map(row => ({
+const bzHistory = dataRows.slice(sixHoursAgoIndex).map(row => ({
   time: row[timeIndex]?.slice(11, 16),
   bz: Number(row[bzIndex]),
   bt: Number(row[btIndex])
