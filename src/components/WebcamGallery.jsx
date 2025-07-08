@@ -1,116 +1,144 @@
 import React from "react";
 
-// Função para obter thumb do YouTube
-function getYoutubeThumb(videoId) {
-  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-}
-
-// Função para gerar URL via seu proxy do Cloudflare
-function getProxiedImg(imgUrl) {
-  return `https://proxy-image.russosec.workers.dev/?url=${encodeURIComponent(imgUrl)}`;
-}
-
+// Lista de webcams (exemplo com YouTube e Landhotel via proxy)
 const WEBCAMS = [
   {
     id: "o-dALODWYfg",
     title: "Abisko Aurora Live",
     country: "Suécia",
-    type: "youtube",
-    videoId: "o-dALODWYfg",
-    url: "https://www.youtube.com/watch?v=o-dALODWYfg"
+    url: "https://www.youtube.com/watch?v=o-dALODWYfg",
+    embed: false, // thumbnail clicável, não iframe
+    type: "youtube"
   },
   {
     id: "ccTVAhJU5lg",
     title: "Kilpisjärvi Aurora Live",
     country: "Finlândia",
-    type: "youtube",
-    videoId: "ccTVAhJU5lg",
-    url: "https://www.youtube.com/watch?v=ccTVAhJU5lg"
+    url: "https://www.youtube.com/watch?v=ccTVAhJU5lg",
+    embed: false,
+    type: "youtube"
   },
   {
     id: "AvKdtZIb-6c",
     title: "Rovaniemi Aurora Live",
     country: "Finlândia",
-    type: "youtube",
-    videoId: "AvKdtZIb-6c",
-    url: "https://www.youtube.com/watch?v=AvKdtZIb-6c"
+    url: "https://www.youtube.com/watch?v=AvKdtZIb-6c",
+    embed: false,
+    type: "youtube"
   },
-  // Imagens Landhotel (via proxy!)
+  // Landhotel North (proxy)
   {
     id: "landhotel-north",
     title: "Landhotel North (Iceland)",
     country: "Islândia",
-    type: "image",
     url: "https://landhotel.is/webcam/northview.jpg",
-    thumb: getProxiedImg("https://landhotel.is/webcam/northview.jpg")
+    embed: false,
+    type: "image",
+    thumb: "https://proxy-image.russosec.workers.dev/?url=https://landhotel.is/webcam/northview.jpg"
   },
   {
     id: "landhotel-east",
     title: "Landhotel East (Iceland)",
     country: "Islândia",
-    type: "image",
     url: "https://landhotel.is/webcam/eastview.jpg",
-    thumb: getProxiedImg("https://landhotel.is/webcam/eastview.jpg")
+    embed: false,
+    type: "image",
+    thumb: "https://proxy-image.russosec.workers.dev/?url=https://landhotel.is/webcam/eastview.jpg"
   }
 ];
 
-// Um card para cada webcam
-function WebcamCard({ webcam }) {
+// Função para thumb do YouTube
+function getYoutubeThumb(id) {
+  return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+}
+
+// Card de webcam
+function WebcamCard({ cam }) {
+  // Decide se é imagem estática ou YouTube
+  const isYoutube = cam.type === "youtube";
+  const thumb = isYoutube
+    ? getYoutubeThumb(cam.id)
+    : cam.thumb || cam.url;
+
   return (
-    <div className="rounded-2xl bg-[#181e28] shadow-md p-4 flex flex-col items-center w-64 m-2">
-      <div className="w-full flex justify-center mb-2">
-        {/* YouTube */}
-        {webcam.type === "youtube" ? (
-          <a href={webcam.url} target="_blank" rel="noopener noreferrer">
-            <img
-              src={getYoutubeThumb(webcam.videoId)}
-              alt={webcam.title}
-              className="w-64 h-36 object-cover rounded-xl mb-2"
-              loading="lazy"
-            />
-            <span
-              style={{
-                position: "relative",
-                top: 12,
-                left: 20,
-                background: "#FF3232",
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: "bold",
-                padding: "2px 8px",
-                borderRadius: "8px",
-                letterSpacing: 1,
-                zIndex: 2
-              }}
-            >
-              AO VIVO
-            </span>
-          </a>
-        ) : (
-          // Imagem estática via proxy
-          <a href={webcam.url} target="_blank" rel="noopener noreferrer">
-            <img
-              src={webcam.thumb}
-              alt={webcam.title}
-              className="w-64 h-36 object-cover rounded-xl mb-2"
-              loading="lazy"
-            />
-          </a>
+    <a
+      href={cam.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="relative rounded-2xl bg-[#131e28] shadow-md flex flex-col items-center p-2 transition hover:scale-105"
+      style={{
+        width: 210,
+        minHeight: 210,
+        margin: "0.5rem",
+        border: "2px solid #32FF8F",
+        textDecoration: "none"
+      }}
+      title={`Assistir ${cam.title} ao vivo`}
+    >
+      {/* Thumbnail */}
+      <div style={{ position: "relative", width: 210, height: 120 }}>
+        <img
+          src={thumb}
+          alt={cam.title}
+          width="210"
+          height="120"
+          style={{
+            borderRadius: "12px",
+            objectFit: "cover",
+            background: "#222"
+          }}
+        />
+        {/* "AO VIVO" */}
+        <span
+          style={{
+            position: "absolute",
+            top: 6,
+            left: 10,
+            background: "#FF3232",
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: "bold",
+            padding: "2px 8px",
+            borderRadius: "8px",
+            letterSpacing: 1,
+            zIndex: 2
+          }}
+        >
+          AO VIVO
+        </span>
+        {/* Ícone de play só no YouTube */}
+        {isYoutube && (
+          <svg
+            viewBox="0 0 64 64"
+            width={44}
+            height={44}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              opacity: 0.85,
+              pointerEvents: "none"
+            }}
+          >
+            <circle cx="32" cy="32" r="32" fill="#000" opacity="0.55" />
+            <polygon points="26,20 26,44 46,32" fill="#fff" />
+          </svg>
         )}
       </div>
-      <div className="font-semibold text-lg text-white">{webcam.title}</div>
-      <div className="text-auroraGreen text-xs mb-1">{webcam.country}</div>
-      <a href={webcam.url} target="_blank" rel="noopener noreferrer"
-         className="text-auroraGreen text-sm underline">Assistir ao vivo</a>
-    </div>
+      <div className="mt-2 text-white text-sm font-semibold text-center">{cam.title}</div>
+      <div className="text-gray-400 text-xs">{cam.country}</div>
+      <div className="text-auroraGreen text-xs mt-1">Clique para assistir ao vivo</div>
+    </a>
   );
 }
 
+// Galeria
 export default function WebcamGallery() {
   return (
-    <div className="flex flex-wrap justify-center">
+    <div className="w-full flex flex-wrap justify-center items-center">
       {WEBCAMS.map(cam => (
-        <WebcamCard key={cam.id} webcam={cam} />
+        <WebcamCard key={cam.id} cam={cam} />
       ))}
     </div>
   );
