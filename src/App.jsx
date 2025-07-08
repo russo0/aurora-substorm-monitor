@@ -58,15 +58,23 @@ export default function App() {
   const fetchAll = useCallback(async () => {
     try {
       // 1. BZ (IMF) + Bt (magnitude)
-     const lastMag = magArr[magArr.length - 1];
+     // Fetch and parse mag data
+const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
+const magArr = await magRes.json();
+const magHeader = magArr[0];
+const bzIndex = magHeader.indexOf("bz_gsm");
+const btIndex = magHeader.indexOf("bt");
+const timeIndex = magHeader.indexOf("time_tag");
+
+const lastMag = magArr[magArr.length - 1];
 const bz = Number(lastMag[bzIndex]);
 const bt = Number(lastMag[btIndex]);
 const magTime = lastMag[timeIndex];
 
-// Find the first row >= 6h ago
+// Calculate last 6h window
 const now = new Date(lastMag[timeIndex]);
 const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-let sixHoursAgoIndex = magArr.length - 1;
+let sixHoursAgoIndex = 1;
 for (let i = magArr.length - 1; i > 0; i--) {
   const rowTime = new Date(magArr[i][timeIndex]);
   if (rowTime <= sixHoursAgo) {
