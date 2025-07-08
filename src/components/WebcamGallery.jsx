@@ -28,13 +28,13 @@ const WEBCAMS = [
   },
   // Imagem Estática (exemplo, se você tiver algum snapshot)
   {
-    id: "some-static-img",
-    title: "Estática Demo",
-    country: "Anywhere",
-    type: "image",
-    url: "https://exemplo.com/cam.jpg",
-    thumb: "https://exemplo.com/thumb.jpg"
-  }
+  id: "landhotel-east",
+  title: "Landhotel Iceland",
+  country: "Iceland",
+  type: "iframe",
+  url: "https://g0.ipcamlive.com/player/player.php?alias=6501dd6068492&autoplay=1&mute=1&disablezoombutton=1&disabledownloadbutton=1&disablenavigation=1",
+  thumb: "https://landhotel.is/wp-content/uploads/2021/05/landhotel_front-1.jpg"
+}
 ];
 
 function getYoutubeThumb(videoId) {
