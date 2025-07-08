@@ -27,6 +27,20 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
+      },
+      // ESTA PARTE É NOVA!
+      workbox: {
+        // Só cacheia arquivos estáticos do próprio domínio!
+        globPatterns: [
+          '**/*.{js,css,html,png,svg,ico,webmanifest}'
+        ],
+        // Não intercepta requests para domínios externos!
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/(?!app\.ivebeentolapland\.space).*$/,
+            handler: 'NetworkOnly', // Nunca cacheia externo!
+          }
+        ]
       }
     })
   ]

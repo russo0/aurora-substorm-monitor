@@ -3,7 +3,7 @@ import React, { useState } from "react";
 const WEBCAMS = [
   {
     id: "abisko",
-    title: "Abisko Aurora Live",
+    title: "Abisko Sweden",
     country: "Sweden",
     type: "youtube",
     url: "https://www.youtube.com/watch?v=o-dALODWYfg",
@@ -11,7 +11,7 @@ const WEBCAMS = [
   },
   {
     id: "kilpisjarvi",
-    title: "Kilpisjärvi Aurora Live",
+    title: "Kilpisjärvi Finland",
     country: "Finland",
     type: "youtube",
     url: "https://www.youtube.com/watch?v=ccTVAhJU5lg",
@@ -19,7 +19,7 @@ const WEBCAMS = [
   },
   {
     id: "rovaniemi",
-    title: "Rovaniemi Aurora Live",
+    title: "Rovaniemi Finland",
     country: "Finland",
     type: "youtube",
     url: "https://www.youtube.com/watch?v=AvKdtZIb-6c",
@@ -28,7 +28,7 @@ const WEBCAMS = [
   // Landhotel North (Iceland)
   {
     id: "landhotel-north",
-    title: "Landhotel North",
+    title: "Landhotel-North Iceland",
     country: "Iceland",
     type: "iframe",
     url: "https://g0.ipcamlive.com/player/player.php?alias=6565ed34e367a&autoplay=1&mute=1&disablezoombutton=1&disabledownloadbutton=1&disablenavigation=1",
@@ -37,7 +37,7 @@ const WEBCAMS = [
   // Landhotel East (Iceland)
   {
     id: "landhotel-east",
-    title: "Landhotel East",
+    title: "Landhotel East-Iceland",
     country: "Iceland",
     type: "iframe",
     url: "https://g0.ipcamlive.com/player/player.php?alias=6501dd6068492&autoplay=1&mute=1&disablezoombutton=1&disabledownloadbutton=1&disablenavigation=1",
