@@ -28,20 +28,18 @@ const WEBCAMS = [
   // Landhotel North (Iceland)
   {
     id: "landhotel-north",
-    title: "Landhotel-North Iceland",
+    title: "Landhotel North - Iceland",
     country: "Iceland",
     type: "iframe",
-    url: "https://g0.ipcamlive.com/player/player.php?alias=6565ed34e367a&autoplay=1&mute=1&disablezoombutton=1&disabledownloadbutton=1&disablenavigation=1",
-    thumb: "https://landhotel.is/wp-content/uploads/2021/05/landhotel_front-1.jpg"
+    url: "https://g0.ipcamlive.com/player/player.php?alias=6565ed34e367a&autoplay=1&mute=1&disablezoombutton=1&disabledownloadbutton=1&disablenavigation=1"
   },
   // Landhotel East (Iceland)
   {
     id: "landhotel-east",
-    title: "Landhotel East-Iceland",
+    title: "Landhotel East - Iceland",
     country: "Iceland",
     type: "iframe",
-    url: "https://g0.ipcamlive.com/player/player.php?alias=6501dd6068492&autoplay=1&mute=1&disablezoombutton=1&disabledownloadbutton=1&disablenavigation=1",
-    thumb: "https://landhotel.is/wp-content/uploads/2021/05/landhotel_front-1.jpg"
+    url: "https://g0.ipcamlive.com/player/player.php?alias=6501dd6068492&autoplay=1&mute=1&disablezoombutton=1&disabledownloadbutton=1&disablenavigation=1"
   }
 ];
 
@@ -63,111 +61,114 @@ export default function WebcamGallery() {
           <div className="w-full flex justify-center mb-2 relative">
             {/* YouTube Embed */}
             {cam.type === "youtube" && (
-              <>
-                {activeCam === cam.id ? (
-                  <iframe
-                    width="320"
-                    height="180"
-                    src={`https://www.youtube.com/embed/${cam.videoId}?autoplay=1&mute=1`}
-                    title={cam.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="rounded-xl"
+              activeCam === cam.id ? (
+                <iframe
+                  width="320"
+                  height="180"
+                  src={`https://www.youtube.com/embed/${cam.videoId}?autoplay=1&mute=1`}
+                  title={cam.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="rounded-xl"
+                />
+              ) : (
+                <div
+                  style={{ position: "relative", cursor: "pointer" }}
+                  onClick={() => setActiveCam(cam.id)}
+                  title="Clique para assistir ao vivo"
+                >
+                  <img
+                    src={getYoutubeThumb(cam.videoId)}
+                    alt={cam.title}
+                    className="w-80 h-44 object-cover rounded-xl"
                   />
-                ) : (
-                  <div
-                    style={{ position: "relative", cursor: "pointer" }}
-                    onClick={() => setActiveCam(cam.id)}
-                    title="Clique para assistir ao vivo"
+                  {/* Play icon overlay */}
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: "translate(-50%,-50%)",
+                      background: "rgba(0,0,0,0.7)",
+                      borderRadius: "50%",
+                      padding: 16,
+                      zIndex: 2
+                    }}
                   >
-                    <img
-                      src={getYoutubeThumb(cam.videoId)}
-                      alt={cam.title}
-                      className="w-80 h-44 object-cover rounded-xl"
-                    />
-                    {/* Play icon overlay */}
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%,-50%)",
-                        background: "rgba(0,0,0,0.7)",
-                        borderRadius: "50%",
-                        padding: 16,
-                        zIndex: 2
-                      }}
-                    >
-                      ▶️
-                    </span>
-                    {/* AO VIVO badge */}
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: 10,
-                        left: 14,
-                        background: "#FF3232",
-                        color: "#fff",
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        padding: "2px 8px",
-                        borderRadius: 8,
-                        letterSpacing: 1,
-                        zIndex: 2
-                      }}
-                    >
-                      AO VIVO
-                    </span>
-                  </div>
-                )}
-              </>
+                    ▶️
+                  </span>
+                  {/* AO VIVO badge */}
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      left: 14,
+                      background: "#FF3232",
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: "bold",
+                      padding: "2px 8px",
+                      borderRadius: 8,
+                      letterSpacing: 1,
+                      zIndex: 2
+                    }}
+                  >
+                    AO VIVO
+                  </span>
+                </div>
+              )
             )}
 
             {/* IP Camera Embed */}
             {cam.type === "iframe" && (
-              <>
-                {activeCam === cam.id ? (
-                  <iframe
-                    src={cam.url}
-                    width="320"
-                    height="180"
-                    frameBorder="0"
-                    allowFullScreen
-                    className="rounded-xl"
-                    title={cam.title}
-                  />
-                ) : (
-                  <div
-                    style={{ position: "relative", cursor: "pointer" }}
-                    onClick={() => setActiveCam(cam.id)}
-                    title="Clique para assistir ao vivo"
+              activeCam === cam.id ? (
+                <iframe
+                  src={cam.url}
+                  width="320"
+                  height="180"
+                  frameBorder="0"
+                  allowFullScreen
+                  className="rounded-xl"
+                  title={cam.title}
+                />
+              ) : (
+                <div
+                  style={{
+                    position: "relative",
+                    cursor: "pointer",
+                    width: 320,
+                    height: 180,
+                    background: "#23292f",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "16px"
+                  }}
+                  onClick={() => setActiveCam(cam.id)}
+                  title="Clique para assistir ao vivo"
+                >
+                  {/* Placeholder camera icon or text */}
+                  <span style={{ fontSize: 48, color: "#32FF8F" }}>📷</span>
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      left: 14,
+                      background: "#FF3232",
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: "bold",
+                      padding: "2px 8px",
+                      borderRadius: 8,
+                      letterSpacing: 1,
+                      zIndex: 2
+                    }}
                   >
-                    <img
-                      src={cam.thumb}
-                      alt={cam.title}
-                      className="w-80 h-44 object-cover rounded-xl"
-                    />
-                    <span
-                      style={{
-                        position: "absolute",
-                        top: 10,
-                        left: 14,
-                        background: "#FF3232",
-                        color: "#fff",
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        padding: "2px 8px",
-                        borderRadius: 8,
-                        letterSpacing: 1,
-                        zIndex: 2
-                      }}
-                    >
-                      AO VIVO
-                    </span>
-                  </div>
-                )}
-              </>
+                    AO VIVO
+                  </span>
+                </div>
+              )
             )}
           </div>
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
