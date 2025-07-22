@@ -4,7 +4,7 @@ import { initReactI18next } from "react-i18next";
 const resources = {
   en: {
     translation: {
-      "Monitor de Subtempestade de Aurora": "Aurora Substorm Monitor",
+      "Monitor de Aurora": "Aurora Monitor",
       "Trocar idioma": "Switch Language",
       "BZ (IMF)": "BZ (IMF)",
       "Vento Solar": "Solar Wind",
@@ -22,7 +22,7 @@ const resources = {
   },
   pt: {
     translation: {
-      "Monitor de Subtempestade de Aurora": "Monitor de Subtempestade de Aurora",
+      "Monitor de Aurora": "Monitor de Aurora",
       "Trocar idioma": "Trocar idioma",
       "BZ (IMF)": "BZ (IMF)",
       "Vento Solar": "Vento Solar",

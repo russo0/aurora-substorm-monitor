@@ -11,7 +11,7 @@ export default function BzChart({ data }) {
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={data}>
           <XAxis dataKey="time" fontSize={12} />
-          <YAxis domain={[-10, 10]} ticks={[-10, -5, 0, 5, 10]} fontSize={12} />
+          <YAxis domain={[-30, 30]} ticks={[-30, -20, -10, -5, 0, 5, 10, 20, 30]} fontSize={12} />
           <Tooltip />
           <ReferenceLine y={0} stroke="#9D00FF" strokeWidth={2} strokeDasharray="6 4" />
           <Line
