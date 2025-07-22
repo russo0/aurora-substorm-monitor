@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 
 export default function BzChart({ data }) {
   const { t } = useTranslation();
-
+  const refLines = [-20, -10, 0, 10, 20];
   return (
     <div className="w-full p-2 rounded-2xl bg-[#161f27] mt-4 shadow-md">
       <div className="text-sm mb-2 text-auroraGreen">{t("Bz")} ({t("Last 6h")})</div>
