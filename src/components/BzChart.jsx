@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 export default function BzChart({ data }) {
   const { t } = useTranslation();
 
-  // Array de valores onde as linhas horizontais vão aparecer (exceto 0)
+  // Linhas horizontais a cada 10 (exceto 0, que vai destacado em roxo)
   const refLines = [-30, -20, -10, 10, 20, 30];
 
   return (
@@ -16,7 +16,7 @@ export default function BzChart({ data }) {
           <XAxis dataKey="time" fontSize={12} />
           <YAxis domain={[-30, 30]} ticks={[-30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30]} fontSize={12} />
           <Tooltip />
-          {/* Linhas horizontais tracejadas em múltiplos de 10 (menos o zero) */}
+          {/* Linhas horizontais tracejadas (cinza discreto) */}
           {refLines.map(y => (
             <ReferenceLine
               key={y}
@@ -26,7 +26,7 @@ export default function BzChart({ data }) {
               strokeDasharray="5 5"
             />
           ))}
-          {/* Linha zero em roxo destacada */}
+          {/* Linha zero (roxo destacado) */}
           <ReferenceLine y={0} stroke="#9D00FF" strokeWidth={2} strokeDasharray="6 4" />
           <Line
             type="monotone"
