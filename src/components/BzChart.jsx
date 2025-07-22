@@ -8,7 +8,7 @@ export default function BzChart({ data }) {
   return (
     <div className="w-full p-2 rounded-2xl bg-[#161f27] mt-4 shadow-md">
       <div className="text-sm mb-2 text-auroraGreen">{t("Bz")} ({t("Last 6h")})</div>
-      <ResponsiveContainer width="100%" height={180}>
+      <ResponsiveContainer width="100%" height={260}>
         <LineChart data={data}>
           <XAxis dataKey="time" fontSize={12} />
           <YAxis domain={[-30, 30]} ticks={[-30, -25, -20, -15, -10, -5, 0, 5, 10, 15, 20, 25, 30]} fontSize={12} />
