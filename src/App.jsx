@@ -197,23 +197,23 @@ export default function App() {
           {t("Monitor de Aurora")}
         </h1>
         <div className="flex gap-2 mb-6">
-  	<button
-    	className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 ${i18n.language === "pt" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
-    	aria-label="Trocar para Português"
-    	onClick={() => i18n.changeLanguage("pt")}
-  	>
-    	🇧🇷
-  	</button>
-  	<button
-    	className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 $	{i18n.language === "en" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
-    	aria-label="Switch to English"
-    	onClick={() => i18n.changeLanguage("en")}
-  	>
-    	🇬🇧
-  	</button>
-	</div>
-
-        </div>
+  <button
+    type="button"
+    className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 ${i18n.language === "pt" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
+    aria-label="Trocar para Português"
+    onClick={() => i18n.changeLanguage("pt")}
+  >
+    🇧🇷
+  </button>
+  <button
+    type="button"
+    className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 ${i18n.language === "en" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
+    aria-label="Switch to English"
+    onClick={() => i18n.changeLanguage("en")}
+  >
+    🇬🇧
+  </button>
+</div>
         <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <DataCard
             title={t("BZ (IMF)")}
