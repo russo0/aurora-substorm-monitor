@@ -181,15 +181,25 @@ export default function App() {
     }}>
       {/* Banner de nova versão */}
       {updateApp && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-auroraGreen text-black px-6 py-3 rounded-xl shadow-xl border-2 border-white flex items-center gap-4 animate-pulse">
-          <span>Nova versão do app disponível.</span>
-          <button
-            className="bg-auroraPurple text-white px-3 py-1 rounded-lg font-semibold shadow hover:bg-[#131e28]"
-            onClick={updateApp}
-          >
-            Atualizar agora
-          </button>
-        </div>
+        <div className="flex gap-2 mb-6">
+  {/* Botão PT */}
+  <button
+    className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 ${i18n.language === "pt" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
+    aria-label="Trocar para Português"
+    onClick={() => i18n.changeLanguage("pt")}
+  >
+    🇧🇷
+  </button>
+  {/* Botão EN */}
+  <button
+    className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 ${i18n.language === "en" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
+    aria-label="Switch to English"
+    onClick={() => i18n.changeLanguage("en")}
+  >
+    🇬🇧
+  </button>
+</div>
+
       )}
 
       <div className="w-full max-w-2xl pt-8 flex flex-col items-center">
