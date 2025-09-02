@@ -7,7 +7,7 @@ const WEBCAMS = [
     country: "Finland",
     type: "youtube",
     url: "https://www.youtube.com/watch?v=rKfecmmzzw0",
-    videoId: "o-dALODWYfg"
+    videoId: "rKfecmmzzw0"
   },
   {
     id: "kilpisjarvi",
