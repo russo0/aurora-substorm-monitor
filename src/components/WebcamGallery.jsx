@@ -2,11 +2,11 @@ import React, { useState } from "react";
 
 const WEBCAMS = [
   {
-    id: "abisko",
-    title: "Abisko Sweden",
-    country: "Sweden",
+    id: "Levi",
+    title: "Levi, Finaland",
+    country: "Finland",
     type: "youtube",
-    url: "https://www.youtube.com/watch?v=o-dALODWYfg",
+    url: "https://www.youtube.com/watch?v=rKfecmmzzw0",
     videoId: "o-dALODWYfg"
   },
   {
