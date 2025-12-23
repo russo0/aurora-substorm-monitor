@@ -2,16 +2,16 @@ import React, { useState } from "react";
 
 const WEBCAMS = [
   {
-    id: "lapland-allsky",
+    id: "Överkalix",
     title: "Överkalix, Sweden",
     country: "Sweden",
-    type: "image",
+    type: "image", // Auto-refreshing all-sky image
     url: "https://allsky.ivebeentolapland.space/indi-allsky/latestimage",
-    refreshInterval: 30000
+    refreshInterval: 30000 // 30 seconds
   },
   {
     id: "Levi",
-    title: "Levi, Finaland",
+    title: "Levi, Finland",
     country: "Finland",
     type: "youtube",
     url: "https://www.youtube.com/watch?v=rKfecmmzzw0",
@@ -67,7 +67,7 @@ export default function WebcamGallery() {
           style={{ minHeight: 250 }}
         >
           <div className="w-full flex justify-center mb-2 relative">
-            {/* YouTube: thumb + play, abre no clique */}
+            {/* YouTube: thumbnail + play on click */}
             {cam.type === "youtube" && (
               <>
                 {activeCam === cam.id ? (
@@ -130,7 +130,7 @@ export default function WebcamGallery() {
               </>
             )}
 
-            {/* IPCamLive: IFRAME SEM CLICK */}
+            {/* IPCamLive: direct iframe */}
             {cam.type === "iframe" && (
               <iframe
                 src={cam.url}
@@ -143,7 +143,45 @@ export default function WebcamGallery() {
                 style={{ background: "#222" }}
               />
             )}
+
+            {/* All-Sky Image: auto-refreshing */}
+            {cam.type === "image" && (
+              <div style={{ position: "relative" }}>
+                <img
+                  src={cam.url + "?t=" + Date.now()} // Cache-buster for refresh
+                  alt={cam.title}
+                  className="w-80 h-44 object-cover rounded-xl"
+                  style={{ background: "#000" }}
+                  onLoad={(e) => {
+                    if (cam.refreshInterval) {
+                      setTimeout(() => {
+                        e.target.src = cam.url + "?t=" + Date.now();
+                      }, cam.refreshInterval);
+                    }
+                  }}
+                />
+                {/* AO VIVO badge */}
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 10,
+                    left: 14,
+                    background: "#FF3232",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: "bold",
+                    padding: "2px 8px",
+                    borderRadius: 8,
+                    letterSpacing: 1,
+                    zIndex: 2
+                  }}
+                >
+                  AO VIVO
+                </span>
+              </div>
+            )}
           </div>
+
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
           <div className="text-auroraGreen text-xs mb-1">{cam.country}</div>
           <a
