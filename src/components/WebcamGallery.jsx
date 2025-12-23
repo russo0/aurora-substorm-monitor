@@ -2,6 +2,14 @@ import React, { useState } from "react";
 
 const WEBCAMS = [
   {
+    id: "lapland-allsky",
+    title: "Överkalix, Sweden",
+    country: "Sweden",
+    type: "image",
+    url: "https://allsky.ivebeentolapland.space/indi-allsky/latestimage",
+    refreshInterval: 30000
+  },
+  {
     id: "Levi",
     title: "Levi, Finaland",
     country: "Finland",
