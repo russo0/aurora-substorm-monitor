@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+   import React, { useState } from "react";
 
 const WEBCAMS = [
    {
@@ -186,8 +186,8 @@ export default function WebcamGallery() {
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
           <div className="text-auroraGreen text-xs mb-1">{cam.country}</div>
           <a
-              href="#"
-              onClick={(e) => {
+             href="#"
+             onClick={(e) => {
                 e.preventDefault();
                 const ts = Date.now();
                 window.open(`${cam.url}?t=${ts}`, "_blank", "noopener,noreferrer");
@@ -195,7 +195,8 @@ export default function WebcamGallery() {
               className="text-auroraGreen text-sm underline"
             >
               Abrir em nova aba
-         </a>
+            </a>
+
 
         </div>
       ))}
