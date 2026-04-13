@@ -186,7 +186,7 @@ export default function WebcamGallery() {
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
           <div className="text-auroraGreen text-xs mb-1">{cam.country}</div>
          <a
-  href={`/allsky/images/view/${Date.now()}/latest.jpg`}
+  href="javascript.void(0)"
   onClick={(e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -197,11 +197,6 @@ export default function WebcamGallery() {
 >
   Abrir em nova aba
 </a>
-
-
-
-
-
         </div>
       ))}
     </div>
