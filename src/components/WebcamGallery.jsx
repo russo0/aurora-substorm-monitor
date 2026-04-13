@@ -192,8 +192,8 @@ export default function WebcamGallery() {
             className="text-auroraGreen text-sm underline"
           >
             Abrir em nova aba
-          </a>va aba
-</a>
+          
+         </a>
 
         </div>
       ))}
