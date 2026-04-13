@@ -186,11 +186,10 @@ export default function WebcamGallery() {
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
           <div className="text-auroraGreen text-xs mb-1">{cam.country}</div>
          <a
-  href="#"
+  href={`/allsky/images/view/${Date.now()}/latest.jpg`}
   onClick={(e) => {
-    e.preventDefault(); // impede o React Router de capturar o clique
-    e.stopPropagation(); // impede qualquer outro handler de interferir
-
+    e.preventDefault();
+    e.stopPropagation();
     const ts = Date.now();
     window.open(`/allsky/images/view/${ts}/latest.jpg`, "_blank", "noopener,noreferrer");
   }}
@@ -198,6 +197,7 @@ export default function WebcamGallery() {
 >
   Abrir em nova aba
 </a>
+
 
 
 
