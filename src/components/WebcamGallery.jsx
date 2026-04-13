@@ -185,13 +185,14 @@ export default function WebcamGallery() {
 
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
           <div className="text-auroraGreen text-xs mb-1">{cam.country}</div>
-         <a
-  href={`https://allsky.ivebeentolapland.space/allsky/images/view/${Date.now()}/latest.jpg`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="text-auroraGreen text-sm underline cursor-pointer"
->
-  Abrir em nova aba
+          <a
+            href={cam.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-auroraGreen text-sm underline"
+          >
+            Abrir em nova aba
+          </a>va aba
 </a>
 
         </div>
