@@ -186,16 +186,15 @@ export default function WebcamGallery() {
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
           <div className="text-auroraGreen text-xs mb-1">{cam.country}</div>
           <a
-             href="#"
-             onClick={(e) => {
-                e.preventDefault();
-                const ts = Date.now();
-                window.open(`/allsky/images/view/${ts}/latest.jpg`, "_blank", "noopener,noreferrer");
-              }}
-              className="text-auroraGreen text-sm underline"
-            >
-              Abrir em nova aba
-            </a>
+  onClick={() => {
+    const ts = Date.now();
+    window.open(`/allsky/images/view/${ts}/latest.jpg`, "_blank", "noopener,noreferrer");
+  }}
+  className="text-auroraGreen text-sm underline cursor-pointer"
+>
+  Abrir em nova aba
+</a>
+
 
 
         </div>
