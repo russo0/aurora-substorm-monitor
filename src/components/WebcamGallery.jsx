@@ -55,6 +55,47 @@ const WEBCAMS = [
 function getYoutubeThumb(videoId) {
   return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 }
+function AutoRefreshingImage({ cam }) {
+  const [src, setSrc] = React.useState(cam.url + "?t=" + Date.now());
+
+  React.useEffect(() => {
+    if (!cam.refreshInterval) return;
+
+    const interval = setInterval(() => {
+      setSrc(cam.url + "?t=" + Date.now());
+    }, cam.refreshInterval);
+
+    return () => clearInterval(interval);
+  }, [cam]);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <img
+        src={src}
+        alt={cam.title}
+        className="w-80 h-44 object-cover rounded-xl"
+        style={{ background: "#000" }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          top: 10,
+          left: 14,
+          background: "#FF3232",
+          color: "#fff",
+          fontSize: 12,
+          fontWeight: "bold",
+          padding: "2px 8px",
+          borderRadius: 8,
+          letterSpacing: 1,
+          zIndex: 2
+        }}
+      >
+        AO VIVO
+      </span>
+    </div>
+  );
+}
 
 export default function WebcamGallery() {
   const [activeCam, setActiveCam] = useState(null);
@@ -147,40 +188,9 @@ export default function WebcamGallery() {
 
             {/* All-Sky Image: auto-refreshing */}
             {cam.type === "image" && (
-              <div style={{ position: "relative" }}>
-                <img
-                  src={cam.url + "?t=" + Date.now()} // Cache-buster for refresh
-                  alt={cam.title}
-                  className="w-80 h-44 object-cover rounded-xl"
-                  style={{ background: "#000" }}
-                  onLoad={(e) => {
-                    if (cam.refreshInterval) {
-                      setTimeout(() => {
-                        e.target.src = cam.url + "?t=" + Date.now();
-                      }, cam.refreshInterval);
-                    }
-                  }}
-                />
-                {/* AO VIVO badge */}
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 10,
-                    left: 14,
-                    background: "#FF3232",
-                    color: "#fff",
-                    fontSize: 12,
-                    fontWeight: "bold",
-                    padding: "2px 8px",
-                    borderRadius: 8,
-                    letterSpacing: 1,
-                    zIndex: 2
-                  }}
-                >
-                  AO VIVO
-                </span>
-              </div>
-            )}
+  <AutoRefreshingImage cam={cam} />
+)}
+
           </div>
 
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
