@@ -195,15 +195,15 @@ export default function WebcamGallery() {
 
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
           <div className="text-auroraGreen text-xs mb-1">{cam.country}</div>
-          <a
-            href={cam.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-auroraGreen text-sm underline"
-          >
-            Abrir em nova aba
-          
-         </a>
+         <a
+  href={cam.url + "?t=" + Date.now()}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-auroraGreen text-sm underline"
+>
+  Abrir em nova aba
+</a>
+
 
         </div>
       ))}
