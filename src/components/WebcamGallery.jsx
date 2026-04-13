@@ -186,17 +186,14 @@ export default function WebcamGallery() {
           <div className="font-semibold text-lg text-white text-center">{cam.title}</div>
           <div className="text-auroraGreen text-xs mb-1">{cam.country}</div>
          <a
-  href="javascript.void(0)"
-  onClick={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const ts = Date.now();
-    window.open(`/allsky/images/view/${ts}/latest.jpg`, "_blank", "noopener,noreferrer");
-  }}
+  href={`https://allsky.ivebeentolapland.space/allsky/images/view/${Date.now()}/latest.jpg`}
+  target="_blank"
+  rel="noopener noreferrer"
   className="text-auroraGreen text-sm underline cursor-pointer"
 >
   Abrir em nova aba
 </a>
+
         </div>
       ))}
     </div>
