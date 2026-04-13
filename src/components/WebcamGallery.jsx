@@ -190,7 +190,7 @@ export default function WebcamGallery() {
              onClick={(e) => {
                 e.preventDefault();
                 const ts = Date.now();
-                window.open(`/allsky/images/view/${ts}/latest.jpg`, "_blank");
+                window.open(`/allsky/images/view/${ts}/latest.jpg`, "_blank", "noopener,noreferrer");
               }}
               className="text-auroraGreen text-sm underline"
             >
