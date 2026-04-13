@@ -6,7 +6,7 @@ const WEBCAMS = [
   title: "Överkalix, Sweden",
   country: "Sweden",
   type: "image", // Auto-refreshing all-sky image
-  url: "https://allsky.ivebeentolapland.space/allsky/images/latest.jpg",
+  url: `https://allsky.ivebeentolapland.space/allsky/images/latest.jpg?ts=${Date.now()}`,
   refreshInterval: 30000 // 30 seconds
 },
 
