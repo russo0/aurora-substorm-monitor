@@ -90,72 +90,70 @@ export default function App() {
   const updateApp = usePWANewVersion();
 
   const fetchAll = useCallback(async () => {
-    try {
-      const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
+  try {
+    const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
 
-      // 1. BZ (IMF) + Bt via Proxy usando novo JSON do DSCOVR
-      const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_mag_1m.json`);
-      const magArr = await magRes.json();
+    // 1. BZ (IMF) + Bt
+    const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_mag_1m.json`);
+    const magArr = await magRes.json();
 
-      // Filtra registros válidos
-      const validMag = magArr.filter(item => item && item.bz_gsm !== null && item.bt !== null);
-      const lastMag = validMag[validMag.length - 1];
+    const validMag = magArr.filter(item => item && item.bz_gsm !== null && item.bt !== null);
+    const lastMag = validMag[validMag.length - 1];
 
-      const bz = Number(lastMag.bz_gsm);
-      const bt = Number(lastMag.bt);
-      const magTime = lastMag.time_tag;
+    const bz = Number(lastMag.bz_gsm);
+    const bt = Number(lastMag.bt);
+    const magTime = lastMag.time_tag;
 
-      // Histórico das últimas leituras
-      const bzHistory = validMag.slice(-360).map(row => ({
-        time: row.time_tag?.slice(11, 16),
-        bz: Number(row.bz_gsm),
-        bt: Number(row.bt)
-      }));
+    const bzHistory = validMag.slice(-360).map(row => ({
+      time: row.time_tag?.slice(11, 16),
+      bz: Number(row.bz_gsm),
+      bt: Number(row.bt)
+    }));
 
-      // 2. Solar Wind via Proxy usando endpoint ativo de 1 dia
-      const plasmaRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json`);
-      const plasmaArr = await plasmaRes.json();
-      const plasmaHeader = plasmaArr[0];
-      const speedIndex = plasmaHeader.indexOf("speed");
+    // 2. Solar Wind (Updated Endpoint)
+    const plasmaRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_plasma_1m.json`);
+    const plasmaData = await plasmaRes.json();
 
-      // Pega a última leitura válida de velocidade
-      let wind = "--";
-      for (let i = plasmaArr.length - 1; i > 0; i--) {
-        const val = Number(plasmaArr[i][speedIndex]);
+    let wind = "--";
+    if (Array.isArray(plasmaData) && plasmaData.length > 0) {
+      for (let i = plasmaData.length - 1; i >= 0; i--) {
+        const val = Number(plasmaData[i].speed);
         if (!isNaN(val) && val > 0) {
           wind = val;
           break;
         }
       }
+    }
 
-      // 3. Kp Index via Proxy
-      const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/planetary_k_index_1m.json`);
-      const kpArr = await kpRes.json();
-      let kp = "--";
-      if (Array.isArray(kpArr) && kpArr.length > 0) {
-        for (let i = kpArr.length - 1; i >= 0; i--) {
-          const val = Number(kpArr[i].kp_index);
-          if (!isNaN(val) && val >= 0) {
-            kp = val;
-            break;
-          }
+    // 3. Kp Index
+    const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/planetary_k_index_1m.json`);
+    const kpArr = await kpRes.json();
+    
+    let kp = "--";
+    if (Array.isArray(kpArr) && kpArr.length > 0) {
+      for (let i = kpArr.length - 1; i >= 0; i--) {
+        const val = Number(kpArr[i].kp_index);
+        if (!isNaN(val) && val >= 0) {
+          kp = val;
+          break;
         }
       }
-
-      setData({
-        bz,
-        wind,
-        kp,
-        bt,
-        bzHistory,
-        time: magTime
-      });
-      setLastUpdate(new Date().toLocaleTimeString());
-    } catch (err) {
-      console.error("Erro ao carregar dados da NOAA:", err);
-      setLastUpdate("erro");
     }
-  }, []);
+
+    setData({
+      bz,
+      wind,
+      kp,
+      bt,
+      bzHistory,
+      time: magTime
+    });
+    setLastUpdate(new Date().toLocaleTimeString());
+  } catch (err) {
+    console.error("Erro ao carregar dados da NOAA:", err);
+    setLastUpdate("erro");
+  }
+}, []);
 
   useEffect(() => {
     fetchAll();
