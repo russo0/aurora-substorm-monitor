@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import DataCard from "./components/DataCard";
 import BzChart from "./components/BzChart";
 import WebcamGallery from "./components/WebcamGallery";
-// import AuroraGlobe from "./components/AuroraGlobe"; // Ative se quiser o globo
 
 // Hook para detectar nova versão do app PWA
 function usePWANewVersion() {
@@ -41,7 +40,7 @@ function usePWANewVersion() {
   return showBanner ? updateApp : null;
 }
 
-// Critério melhorado de subtempestade
+// Critério de subtempestade
 function getChance(bzHistory, wind, bt) {
   let countBz6 = 0, countBz7 = 0, countBz4 = 0;
   bzHistory.forEach(item => {
@@ -88,57 +87,55 @@ export default function App() {
   const [lastUpdate, setLastUpdate] = useState("--");
   const intervalRef = useRef(null);
 
-  // Detecta nova versão do app!
   const updateApp = usePWANewVersion();
 
   const fetchAll = useCallback(async () => {
     try {
-      // 1. BZ (IMF) + Bt (magnitude)
-      const magRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json");
+      const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
+
+      // 1. BZ (IMF) + Bt via Proxy usando novo JSON do DSCOVR
+      const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_mag_1m.json`);
       const magArr = await magRes.json();
-      const magHeader = magArr[0];
-      const bzIndex = magHeader.indexOf("bz_gsm");
-      const btIndex = magHeader.indexOf("bt");
-      const timeIndex = magHeader.indexOf("time_tag");
 
-      const lastMag = magArr[magArr.length - 1];
-      const bz = Number(lastMag[bzIndex]);
-      const bt = Number(lastMag[btIndex]);
-      const magTime = lastMag[timeIndex];
+      // Filtra registros válidos
+      const validMag = magArr.filter(item => item && item.bz_gsm !== null && item.bt !== null);
+      const lastMag = validMag[validMag.length - 1];
 
-      // Últimas 6h
-      const now = new Date(lastMag[timeIndex]);
-      const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-      let sixHoursAgoIndex = 1;
-      for (let i = magArr.length - 1; i > 0; i--) {
-        const rowTime = new Date(magArr[i][timeIndex]);
-        if (rowTime <= sixHoursAgo) {
-          sixHoursAgoIndex = i;
-          break;
-        }
-      }
-      const bzHistory = magArr.slice(sixHoursAgoIndex).map(row => ({
-        time: row[timeIndex]?.slice(11, 16),
-        bz: Number(row[bzIndex]),
-        bt: Number(row[btIndex])
+      const bz = Number(lastMag.bz_gsm);
+      const bt = Number(lastMag.bt);
+      const magTime = lastMag.time_tag;
+
+      // Histórico das últimas leituras
+      const bzHistory = validMag.slice(-360).map(row => ({
+        time: row.time_tag?.slice(11, 16),
+        bz: Number(row.bz_gsm),
+        bt: Number(row.bt)
       }));
 
-      // 2. Solar Wind
-      const plasmaRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json");
+      // 2. Solar Wind via Proxy usando endpoint ativo de 1 dia
+      const plasmaRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json`);
       const plasmaArr = await plasmaRes.json();
       const plasmaHeader = plasmaArr[0];
       const speedIndex = plasmaHeader.indexOf("speed");
-      const lastPlasma = plasmaArr[plasmaArr.length - 1];
-      const wind = Number(lastPlasma[speedIndex]);
 
-      // 3. Kp Index (pega último valor real, maior que 0)
-      const kpRes = await fetch("https://services.swpc.noaa.gov/json/planetary_k_index_1m.json");
+      // Pega a última leitura válida de velocidade
+      let wind = "--";
+      for (let i = plasmaArr.length - 1; i > 0; i--) {
+        const val = Number(plasmaArr[i][speedIndex]);
+        if (!isNaN(val) && val > 0) {
+          wind = val;
+          break;
+        }
+      }
+
+      // 3. Kp Index via Proxy
+      const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/planetary_k_index_1m.json`);
       const kpArr = await kpRes.json();
       let kp = "--";
       if (Array.isArray(kpArr) && kpArr.length > 0) {
         for (let i = kpArr.length - 1; i >= 0; i--) {
           const val = Number(kpArr[i].kp_index);
-          if (!isNaN(val) && val > 0) {
+          if (!isNaN(val) && val >= 0) {
             kp = val;
             break;
           }
@@ -155,6 +152,7 @@ export default function App() {
       });
       setLastUpdate(new Date().toLocaleTimeString());
     } catch (err) {
+      console.error("Erro ao carregar dados da NOAA:", err);
       setLastUpdate("erro");
     }
   }, []);
@@ -164,10 +162,6 @@ export default function App() {
     intervalRef.current = setInterval(fetchAll, 60000);
     return () => clearInterval(intervalRef.current);
   }, [fetchAll]);
-
-  const handleLanguageSwitch = () => {
-    i18n.changeLanguage(i18n.language === "en" ? "pt" : "en");
-  };
 
   const handleManualUpdate = () => {
     fetchAll();
@@ -179,7 +173,6 @@ export default function App() {
     <div className="min-h-screen flex flex-col items-center px-2 pb-10" style={{
       background: "radial-gradient(ellipse at 50% 10%, #183153 0%, #0B1C24 100%)"
     }}>
-      {/* Banner de nova versão */}
       {updateApp && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-auroraGreen text-black px-6 py-3 rounded-xl shadow-xl border-2 border-white flex items-center gap-4 animate-pulse">
           <span>Nova versão do app disponível.</span>
@@ -197,23 +190,23 @@ export default function App() {
           {t("Monitor de Aurora")}
         </h1>
         <div className="flex gap-2 mb-6">
-  <button
-    type="button"
-    className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 ${i18n.language === "pt" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
-    aria-label="Trocar para Português"
-    onClick={() => i18n.changeLanguage("pt")}
-  >
-    🇧🇷
-  </button>
-  <button
-    type="button"
-    className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 ${i18n.language === "en" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
-    aria-label="Switch to English"
-    onClick={() => i18n.changeLanguage("en")}
-  >
-    🇬🇧
-  </button>
-</div>
+          <button
+            type="button"
+            className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 ${i18n.language === "pt" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
+            aria-label="Trocar para Português"
+            onClick={() => i18n.changeLanguage("pt")}
+          >
+            🇧🇷
+          </button>
+          <button
+            type="button"
+            className={`rounded-full w-9 h-9 text-2xl flex items-center justify-center border-2 ${i18n.language === "en" ? "border-auroraGreen bg-[#223944]" : "border-gray-400 bg-[#161f27]"} transition`}
+            aria-label="Switch to English"
+            onClick={() => i18n.changeLanguage("en")}
+          >
+            🇬🇧
+          </button>
+        </div>
         <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <DataCard
             title={t("BZ (IMF)")}
@@ -253,7 +246,6 @@ export default function App() {
           </span>
         </div>
         <BzChart data={data.bzHistory} />
-        {/* Botão de atualização abaixo do gráfico */}
         <div className="mt-4 mb-4 w-full flex justify-center">
           <button
             className="text-sm bg-[#183153] hover:bg-auroraGreen hover:text-black rounded-lg px-3 py-1 text-white border border-white transition"
@@ -264,7 +256,6 @@ export default function App() {
         </div>
         <div className="mt-2 text-xs text-white">{t("Última atualização")}: {lastUpdate ?? "--"}</div>
       </div>
-      {/* <AuroraGlobe latMin={65} latMax={70} /> */}
       <WebcamGallery />
     </div>
   );
