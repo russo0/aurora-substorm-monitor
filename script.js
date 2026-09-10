@@ -16,7 +16,7 @@ async function fetchLiveData() {
   document.getElementById('alert-status').textContent = lang === 'pt' ? 'Atualizando...' : 'Updating...';
 
   try {
-    const bzRes = await fetch('https://proxy-noaa.russosec.workers.dev/?url=https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json');
+    const bzRes = await fetch('https://proxy-noaa.russosec.workers.dev/?url=https://services.swpc.noaa.gov/json/solar-wind/mag-1-minute.json');
     const bzData = await bzRes.json();
     const bzValues = bzData.slice(-72).map(row => parseFloat(row[6]));
 
