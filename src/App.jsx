@@ -5,6 +5,35 @@ import DataCard from "./components/DataCard";
 import BzChart from "./components/BzChart";
 import WebcamGallery from "./components/WebcamGallery";
 
+const NOAA_BASE_URL = "https://services.swpc.noaa.gov";
+const NOAA_PROXY_URL = "https://proxy-noaa.russosec.workers.dev/";
+
+async function fetchNoaaJson(path) {
+  const targetUrl = `${NOAA_BASE_URL}${path}`;
+  const response = await fetch(
+    `${NOAA_PROXY_URL}?url=${encodeURIComponent(targetUrl)}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`NOAA respondeu com HTTP ${response.status} para ${path}`);
+  }
+
+  return response.json();
+}
+
+function numberOrNull(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function latestValidRecord(records, isValid) {
+  if (!Array.isArray(records)) return null;
+
+  return records
+    .filter((record) => record && isValid(record))
+    .sort((first, second) => new Date(second.time_tag) - new Date(first.time_tag))[0] ?? null;
+}
+
 // Hook para detectar nova versão do app PWA
 function usePWANewVersion() {
   const [waitingWorker, setWaitingWorker] = useState(null);
@@ -90,72 +119,75 @@ export default function App() {
   const updateApp = usePWANewVersion();
 
   const fetchAll = useCallback(async () => {
-    console.log("🚀 [1/5] Iniciando fetchAll...");
-    const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
     let bz = "--", bt = "--", wind = "--", kp = "--", bzHistory = [], magTime = "--";
 
-    // 1. Kp Index
-    try {
-      console.log("📡 [2/5] Buscando Kp...");
-      const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json`);
-      const kpArr = await kpRes.json();
-      if (Array.isArray(kpArr) && kpArr.length > 1) {
-        kp = Number(kpArr[kpArr.length - 1][1]);
-        console.log("✅ Kp recebido:", kp);
-      }
-    } catch (e) {
-      console.error("❌ Erro no Kp:", e);
+    // Em junho de 2026 a NOAA substituiu os antigos feeds DSCOVR e mudou
+    // tanto os caminhos quanto os nomes dos campos retornados.
+    const [kpResult, windResult, magResult, historyResult] = await Promise.allSettled([
+      fetchNoaaJson("/products/noaa-planetary-k-index.json"),
+      fetchNoaaJson("/products/summary/solar-wind-speed.json"),
+      fetchNoaaJson("/products/summary/solar-wind-mag-field.json"),
+      fetchNoaaJson("/json/rtsw/rtsw_mag_1m.json"),
+    ]);
+
+    if (kpResult.status === "fulfilled") {
+      const latestKp = latestValidRecord(
+        kpResult.value,
+        (record) => numberOrNull(record.Kp) !== null
+      );
+      if (latestKp) kp = numberOrNull(latestKp.Kp);
+    } else {
+      console.error("Erro ao buscar Kp:", kpResult.reason);
     }
 
-    // 2. Vento Solar
-    try {
-      console.log("📡 [3/5] Buscando Vento Solar...");
-      const windRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json`);
-      const windData = await windRes.json();
-      if (windData && windData.WindSpeed) {
-        wind = parseFloat(windData.WindSpeed);
-        console.log("✅ Vento recebido:", wind);
-      }
-    } catch (e) {
-      console.error("❌ Erro no Vento Solar:", e);
+    if (windResult.status === "fulfilled") {
+      const latestWind = latestValidRecord(
+        windResult.value,
+        (record) => numberOrNull(record.proton_speed) !== null
+      );
+      if (latestWind) wind = numberOrNull(latestWind.proton_speed);
+    } else {
+      console.error("Erro ao buscar vento solar:", windResult.reason);
     }
 
-    // 3. Magnetômetro
-    try {
-      console.log("📡 [4/5] Buscando Magnetômetro...");
-      const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-mag.json`);
-      const magData = await magRes.json();
-      if (magData) {
-        bz = parseFloat(magData.Bz);
-        bt = parseFloat(magData.Bt);
-        magTime = magData.Time;
-        console.log("✅ Magnetômetro recebido:", { bz, bt });
+    if (magResult.status === "fulfilled") {
+      const latestMag = latestValidRecord(
+        magResult.value,
+        (record) => numberOrNull(record.bz_gsm) !== null && numberOrNull(record.bt) !== null
+      );
+      if (latestMag) {
+        bz = numberOrNull(latestMag.bz_gsm);
+        bt = numberOrNull(latestMag.bt);
+        magTime = latestMag.time_tag;
       }
-    } catch (e) {
-      console.error("❌ Erro no Magnetômetro:", e);
+    } else {
+      console.error("Erro ao buscar magnetômetro:", magResult.reason);
     }
 
-    // 4. Histórico
-    try {
-      console.log("📡 [5/5] Buscando Histórico...");
-      const histRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_mag_1m.json`);
-      const histData = await histRes.json();
-      if (Array.isArray(histData) && histData.length > 0) {
-        const recent = histData.slice(-100);
-        bzHistory = recent
-          .filter(item => item && item.bz_gsm !== null)
-          .map(row => ({
-            time: row.time_tag?.slice(11, 16) || "",
-            bz: Number(row.bz_gsm) || 0,
-            bt: Number(row.bt || 0)
-          }));
-        console.log("✅ Histórico processado! Total de pontos:", bzHistory.length);
-      }
-    } catch (e) {
-      console.error("❌ Erro no Histórico:", e);
+    if (historyResult.status === "fulfilled" && Array.isArray(historyResult.value)) {
+      const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+      const history = historyResult.value
+        .filter((record) => (
+          record?.active !== false
+          && Number.isFinite(new Date(record.time_tag).getTime())
+          && numberOrNull(record.bz_gsm) !== null
+          && numberOrNull(record.bt) !== null
+        ))
+        .sort((first, second) => new Date(first.time_tag) - new Date(second.time_tag));
+      const lastSixHours = history.filter(
+        (record) => new Date(record.time_tag).getTime() >= sixHoursAgo
+      );
+      const samples = lastSixHours.length > 0 ? lastSixHours : history.slice(-360);
+
+      bzHistory = samples.map((record) => ({
+        time: record.time_tag.slice(11, 16),
+        bz: numberOrNull(record.bz_gsm),
+        bt: numberOrNull(record.bt),
+      }));
+    } else if (historyResult.status === "rejected") {
+      console.error("Erro ao buscar histórico do magnetômetro:", historyResult.reason);
     }
 
-    console.log("💾 Atualizando estado no React com:", { bz, wind, kp, bt });
     setData({ bz, wind, kp, bt, bzHistory, time: magTime });
     setLastUpdate(new Date().toLocaleTimeString());
   }, []);
