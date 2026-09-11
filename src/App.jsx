@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import DataCard from "./components/DataCard";
 import BzChart from "./components/BzChart";
 import LocalForecastPanel from "./components/LocalForecastPanel";
+import WindyCloudMap from "./components/WindyCloudMap";
 import WebcamGallery from "./components/WebcamGallery";
 import {
   WEATHER_POINTS,
@@ -394,6 +395,7 @@ export default function App() {
           updatedAt={localForecast.updatedAt}
         />
 
+        <WindyCloudMap />
         <BzChart data={data.bzHistory} />
         <div className="mt-4 mb-4 flex w-full justify-center">
           <button
