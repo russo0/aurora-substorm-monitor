@@ -90,65 +90,68 @@ export default function App() {
   const updateApp = usePWANewVersion();
 
   const fetchAll = useCallback(async () => {
-  const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
-  let bz = "--", bt = "--", wind = "--", kp = "--", bzHistory = [], magTime = "--";
+    const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
+    let bz = "--", bt = "--", wind = "--", kp = "--", bzHistory = [], magTime = "--";
 
-  // 1. Kp Index (Planetary K-Index)
-  try {
-    const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json`);
-    const kpArr = await kpRes.json();
-    if (Array.isArray(kpArr) && kpArr.length > 1) {
-      const lastKp = kpArr[kpArr.length - 1];
-      kp = Number(lastKp[1]);
+    // 1. Kp Index (Planetary K-Index)
+    try {
+      const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json`);
+      const kpArr = await kpRes.json();
+      if (Array.isArray(kpArr) && kpArr.length > 1) {
+        const lastKp = kpArr[kpArr.length - 1];
+        kp = Number(lastKp[1]);
+      }
+    } catch (e) {
+      console.error("Erro no Kp:", e);
     }
-  } catch (e) {
-    console.error("Erro no Kp:", e);
-  }
 
-  // 2. Vento Solar (Velocidade)
-  try {
-    const windRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json`);
-    const windData = await windRes.json();
-    // Extrai o valor numérico de WindSpeed (ex: "420.5" -> 420.5)
-    if (windData && windData.WindSpeed) {
-      wind = parseFloat(windData.WindSpeed);
+    // 2. Vento Solar (Velocidade)
+    try {
+      const windRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json`);
+      const windData = await windRes.json();
+      if (windData && windData.WindSpeed) {
+        wind = parseFloat(windData.WindSpeed);
+      }
+    } catch (e) {
+      console.error("Erro no Vento Solar:", e);
     }
-  } catch (e) {
-    console.error("Erro no Vento Solar:", e);
-  }
 
-  // 3. Magnetômetro (Bz e Bt em tempo real)
-  try {
-    const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-mag.json`);
-    const magData = await magRes.json();
-    if (magData) {
-      bz = parseFloat(magData.Bz);
-      bt = parseFloat(magData.Bt);
-      magTime = magData.Time;
+    // 3. Magnetômetro (Bz e Bt)
+    try {
+      const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-mag.json`);
+      const magData = await magRes.json();
+      if (magData) {
+        bz = parseFloat(magData.Bz);
+        bt = parseFloat(magData.Bt);
+        magTime = magData.Time;
+      }
+    } catch (e) {
+      console.error("Erro no Bz/Bt:", e);
     }
-  } catch (e) {
-    console.error("Erro no Bz/Bt:", e);
-  }
 
-  // 4. Histórico para o Gráfico BzChart (JSON do DSCOVR via Proxy)
-  try {
-    const histRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_mag_1m.json`);
-    const histData = await histRes.json();
-    if (Array.isArray(histData) && histData.length > 0) {
-      const validHist = histData.filter(item => item && item.bz_gsm !== null);
-      bzHistory = validHist.slice(-360).map(row => ({
-        time: row.time_tag?.slice(11, 16),
-        bz: Number(row.bz_gsm),
-        bt: Number(row.bt || 0)
-      }));
+    // 4. Histórico Otimizado (Pega só o final do array sem travar a CPU)
+    try {
+      const histRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_mag_1m.json`);
+      const histData = await histRes.json();
+      if (Array.isArray(histData) && histData.length > 0) {
+        // Corta os últimos 360 elementos ANTES de filtrar
+        const recentData = histData.slice(-360);
+        bzHistory = recentData
+          .filter(item => item && item.bz_gsm !== null && !isNaN(Number(item.bz_gsm)))
+          .map(row => ({
+            time: row.time_tag?.slice(11, 16) || "",
+            bz: Number(row.bz_gsm),
+            bt: Number(row.bt || 0)
+          }));
+      }
+    } catch (e) {
+      console.error("Erro no Histórico de Bz:", e);
     }
-  } catch (e) {
-    console.error("Erro no Histórico de Bz:", e);
-  }
 
-  setData({ bz, wind, kp, bt, bzHistory, time: magTime });
-  setLastUpdate(new Date().toLocaleTimeString());
-}, []);
+    // Renderiza os dados no estado
+    setData({ bz, wind, kp, bt, bzHistory, time: magTime });
+    setLastUpdate(new Date().toLocaleTimeString());
+  }, []);
 
   useEffect(() => {
     fetchAll();
