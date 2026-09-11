@@ -9,7 +9,14 @@ const WEBCAMS = [
   url: "https://allsky.ivebeentolapland.space/allsky/images/latest.jpg",
   refreshInterval: 30000 // 30 seconds
 },
-
+{
+    id: "Överkalix",
+    title: "Överkalix, Sweden",
+    country: "Sweden",
+    type: "youtube",
+    url: "https://www.youtube.com/watch?v=mdajYIDKf64",
+    videoId: "mdajYIDKf64"
+  },
   {
     id: "Levi",
     title: "Levi, Finland",
