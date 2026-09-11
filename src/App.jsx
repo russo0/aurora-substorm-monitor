@@ -93,68 +93,59 @@ export default function App() {
   const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
   let bz = "--", bt = "--", wind = "--", kp = "--", bzHistory = [], magTime = "--";
 
-  // 1. Busca BZ / BT (com tratamento individual de erro)
+  // 1. Kp Index (Planetary K-Index)
   try {
-    const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json`);
-    const magArr = await magRes.json();
-    if (Array.isArray(magArr) && magArr.length > 1) {
-      const header = magArr[0];
-      const bzIndex = header.indexOf("bz_gsm");
-      const btIndex = header.indexOf("bt");
-      const timeIndex = header.indexOf("time_tag");
+    const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json`);
+    const kpArr = await kpRes.json();
+    if (Array.isArray(kpArr) && kpArr.length > 1) {
+      const lastKp = kpArr[kpArr.length - 1];
+      kp = Number(lastKp[1]);
+    }
+  } catch (e) {
+    console.error("Erro no Kp:", e);
+  }
 
-      const last = magArr[magArr.length - 1];
-      bz = Number(last[bzIndex]);
-      bt = Number(last[btIndex]);
-      magTime = last[timeIndex];
+  // 2. Vento Solar (Velocidade)
+  try {
+    const windRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json`);
+    const windData = await windRes.json();
+    // Extrai o valor numérico de WindSpeed (ex: "420.5" -> 420.5)
+    if (windData && windData.WindSpeed) {
+      wind = parseFloat(windData.WindSpeed);
+    }
+  } catch (e) {
+    console.error("Erro no Vento Solar:", e);
+  }
 
-      bzHistory = magArr.slice(-360).map(row => ({
-        time: row[timeIndex]?.slice(11, 16),
-        bz: Number(row[bzIndex]),
-        bt: Number(row[btIndex])
+  // 3. Magnetômetro (Bz e Bt em tempo real)
+  try {
+    const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-mag.json`);
+    const magData = await magRes.json();
+    if (magData) {
+      bz = parseFloat(magData.Bz);
+      bt = parseFloat(magData.Bt);
+      magTime = magData.Time;
+    }
+  } catch (e) {
+    console.error("Erro no Bz/Bt:", e);
+  }
+
+  // 4. Histórico para o Gráfico BzChart (JSON do DSCOVR via Proxy)
+  try {
+    const histRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_mag_1m.json`);
+    const histData = await histRes.json();
+    if (Array.isArray(histData) && histData.length > 0) {
+      const validHist = histData.filter(item => item && item.bz_gsm !== null);
+      bzHistory = validHist.slice(-360).map(row => ({
+        time: row.time_tag?.slice(11, 16),
+        bz: Number(row.bz_gsm),
+        bt: Number(row.bt || 0)
       }));
     }
   } catch (e) {
-    console.error("Erro Bz:", e);
+    console.error("Erro no Histórico de Bz:", e);
   }
 
-  // 2. Busca Vento Solar
-  try {
-    const plasmaRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json`);
-    const plasmaArr = await plasmaRes.json();
-    if (Array.isArray(plasmaArr) && plasmaArr.length > 1) {
-      const header = plasmaArr[0];
-      const speedIndex = header.indexOf("speed");
-      for (let i = plasmaArr.length - 1; i > 0; i--) {
-        const val = Number(plasmaArr[i][speedIndex]);
-        if (!isNaN(val) && val > 0) {
-          wind = val;
-          break;
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Erro Wind:", e);
-  }
-
-  // 3. Busca Kp Index
-  try {
-    const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/planetary_k_index_1m.json`);
-    const kpArr = await kpRes.json();
-    if (Array.isArray(kpArr) && kpArr.length > 0) {
-      for (let i = kpArr.length - 1; i >= 0; i--) {
-        const val = Number(kpArr[i].kp_index);
-        if (!isNaN(val) && val >= 0) {
-          kp = val;
-          break;
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Erro Kp:", e);
-  }
-
-  // Atualiza a tela com o que conseguiu carregar
   setData({ bz, wind, kp, bt, bzHistory, time: magTime });
   setLastUpdate(new Date().toLocaleTimeString());
 }, []);
