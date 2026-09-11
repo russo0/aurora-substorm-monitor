@@ -90,65 +90,72 @@ export default function App() {
   const updateApp = usePWANewVersion();
 
   const fetchAll = useCallback(async () => {
+    console.log("🚀 [1/5] Iniciando fetchAll...");
     const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
     let bz = "--", bt = "--", wind = "--", kp = "--", bzHistory = [], magTime = "--";
 
-    // 1. Kp Index (Planetary K-Index)
+    // 1. Kp Index
     try {
+      console.log("📡 [2/5] Buscando Kp...");
       const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json`);
       const kpArr = await kpRes.json();
       if (Array.isArray(kpArr) && kpArr.length > 1) {
-        const lastKp = kpArr[kpArr.length - 1];
-        kp = Number(lastKp[1]);
+        kp = Number(kpArr[kpArr.length - 1][1]);
+        console.log("✅ Kp recebido:", kp);
       }
     } catch (e) {
-      console.error("Erro no Kp:", e);
+      console.error("❌ Erro no Kp:", e);
     }
 
-    // 2. Vento Solar (Velocidade)
+    // 2. Vento Solar
     try {
+      console.log("📡 [3/5] Buscando Vento Solar...");
       const windRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json`);
       const windData = await windRes.json();
       if (windData && windData.WindSpeed) {
         wind = parseFloat(windData.WindSpeed);
+        console.log("✅ Vento recebido:", wind);
       }
     } catch (e) {
-      console.error("Erro no Vento Solar:", e);
+      console.error("❌ Erro no Vento Solar:", e);
     }
 
-    // 3. Magnetômetro (Bz e Bt)
+    // 3. Magnetômetro
     try {
+      console.log("📡 [4/5] Buscando Magnetômetro...");
       const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/summary/solar-wind-mag.json`);
       const magData = await magRes.json();
       if (magData) {
         bz = parseFloat(magData.Bz);
         bt = parseFloat(magData.Bt);
         magTime = magData.Time;
+        console.log("✅ Magnetômetro recebido:", { bz, bt });
       }
     } catch (e) {
-      console.error("Erro no Bz/Bt:", e);
+      console.error("❌ Erro no Magnetômetro:", e);
     }
 
-    // 4. Histórico Otimizado (Pega só o final do array sem travar a CPU)
+    // 4. Histórico
     try {
+      console.log("📡 [5/5] Buscando Histórico...");
       const histRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_mag_1m.json`);
       const histData = await histRes.json();
       if (Array.isArray(histData) && histData.length > 0) {
-        // Corta os últimos 360 elementos ANTES de filtrar
-        const recentData = histData.slice(-360);
-        bzHistory = recentData
-          .filter(item => item && item.bz_gsm !== null && !isNaN(Number(item.bz_gsm)))
+        const recent = histData.slice(-100);
+        bzHistory = recent
+          .filter(item => item && item.bz_gsm !== null)
           .map(row => ({
             time: row.time_tag?.slice(11, 16) || "",
-            bz: Number(row.bz_gsm),
+            bz: Number(row.bz_gsm) || 0,
             bt: Number(row.bt || 0)
           }));
+        console.log("✅ Histórico processado! Total de pontos:", bzHistory.length);
       }
     } catch (e) {
-      console.error("Erro no Histórico de Bz:", e);
+      console.error("❌ Erro no Histórico:", e);
     }
 
-    // Renderiza os dados no estado
+    console.log("💾 Atualizando estado no React com:", { bz, wind, kp, bt });
     setData({ bz, wind, kp, bt, bzHistory, time: magTime });
     setLastUpdate(new Date().toLocaleTimeString());
   }, []);
