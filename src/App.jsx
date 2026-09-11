@@ -90,46 +90,57 @@ export default function App() {
   const updateApp = usePWANewVersion();
 
   const fetchAll = useCallback(async () => {
+  const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
+  let bz = "--", bt = "--", wind = "--", kp = "--", bzHistory = [], magTime = "--";
+
+  // 1. Busca BZ / BT (com tratamento individual de erro)
   try {
-    const PROXY = "https://proxy-noaa.russosec.workers.dev/?url=";
-
-    // 1. BZ (IMF) + Bt
-    const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_mag_1m.json`);
+    const magRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/solar-wind/mag-1-day.json`);
     const magArr = await magRes.json();
+    if (Array.isArray(magArr) && magArr.length > 1) {
+      const header = magArr[0];
+      const bzIndex = header.indexOf("bz_gsm");
+      const btIndex = header.indexOf("bt");
+      const timeIndex = header.indexOf("time_tag");
 
-    const validMag = magArr.filter(item => item && item.bz_gsm !== null && item.bt !== null);
-    const lastMag = validMag[validMag.length - 1];
+      const last = magArr[magArr.length - 1];
+      bz = Number(last[bzIndex]);
+      bt = Number(last[btIndex]);
+      magTime = last[timeIndex];
 
-    const bz = Number(lastMag.bz_gsm);
-    const bt = Number(lastMag.bt);
-    const magTime = lastMag.time_tag;
+      bzHistory = magArr.slice(-360).map(row => ({
+        time: row[timeIndex]?.slice(11, 16),
+        bz: Number(row[bzIndex]),
+        bt: Number(row[btIndex])
+      }));
+    }
+  } catch (e) {
+    console.error("Erro Bz:", e);
+  }
 
-    const bzHistory = validMag.slice(-360).map(row => ({
-      time: row.time_tag?.slice(11, 16),
-      bz: Number(row.bz_gsm),
-      bt: Number(row.bt)
-    }));
-
-    // 2. Solar Wind (Updated Endpoint)
-    const plasmaRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/dscovr/dscovr_plasma_1m.json`);
-    const plasmaData = await plasmaRes.json();
-
-    let wind = "--";
-    if (Array.isArray(plasmaData) && plasmaData.length > 0) {
-      for (let i = plasmaData.length - 1; i >= 0; i--) {
-        const val = Number(plasmaData[i].speed);
+  // 2. Busca Vento Solar
+  try {
+    const plasmaRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json`);
+    const plasmaArr = await plasmaRes.json();
+    if (Array.isArray(plasmaArr) && plasmaArr.length > 1) {
+      const header = plasmaArr[0];
+      const speedIndex = header.indexOf("speed");
+      for (let i = plasmaArr.length - 1; i > 0; i--) {
+        const val = Number(plasmaArr[i][speedIndex]);
         if (!isNaN(val) && val > 0) {
           wind = val;
           break;
         }
       }
     }
+  } catch (e) {
+    console.error("Erro Wind:", e);
+  }
 
-    // 3. Kp Index
+  // 3. Busca Kp Index
+  try {
     const kpRes = await fetch(`${PROXY}https://services.swpc.noaa.gov/json/planetary_k_index_1m.json`);
     const kpArr = await kpRes.json();
-    
-    let kp = "--";
     if (Array.isArray(kpArr) && kpArr.length > 0) {
       for (let i = kpArr.length - 1; i >= 0; i--) {
         const val = Number(kpArr[i].kp_index);
@@ -139,20 +150,13 @@ export default function App() {
         }
       }
     }
-
-    setData({
-      bz,
-      wind,
-      kp,
-      bt,
-      bzHistory,
-      time: magTime
-    });
-    setLastUpdate(new Date().toLocaleTimeString());
-  } catch (err) {
-    console.error("Erro ao carregar dados da NOAA:", err);
-    setLastUpdate("erro");
+  } catch (e) {
+    console.error("Erro Kp:", e);
   }
+
+  // Atualiza a tela com o que conseguiu carregar
+  setData({ bz, wind, kp, bt, bzHistory, time: magTime });
+  setLastUpdate(new Date().toLocaleTimeString());
 }, []);
 
   useEffect(() => {
