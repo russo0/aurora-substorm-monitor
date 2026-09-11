@@ -28,17 +28,19 @@ export default defineConfig({
           }
         ]
       },
-      // ESTA PARTE É NOVA!
       workbox: {
-        // Só cacheia arquivos estáticos do próprio domínio!
+        clientsClaim: true,
+        skipWaiting: true,
+        cleanupOutdatedCaches: true,
+        // Só armazena arquivos estáticos do próprio domínio.
         globPatterns: [
           '**/*.{js,css,html,png,svg,ico,webmanifest}'
         ],
-        // Não intercepta requests para domínios externos!
+        // Dados da NOAA e do Worker devem sempre vir da rede.
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/(?!app\.ivebeentolapland\.space).*$/,
-            handler: 'NetworkOnly', // Nunca cacheia externo!
+            handler: 'NetworkOnly',
           }
         ]
       }
