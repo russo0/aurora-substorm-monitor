@@ -48,7 +48,7 @@ async function fetchWeatherForecast() {
 }
 
 async function fetchGroundActivity() {
-  const response = await fetch("/api/magnetometers", { cache: "no-store" });
+  const minuteKey = Math.floor(Date.now() / 60000);\n  const response = await fetch("/api/magnetometers?minute=" + minuteKey, { cache: "no-store" });
   if (!response.ok) throw new Error("Magnetômetros responderam com HTTP " + response.status);
   return response.json();
 }
