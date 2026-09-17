@@ -22,15 +22,30 @@ function ovalMessage(oval, t) {
   return t("Oval fraco para esta latitude");
 }
 
-function recommendation({ solar, oval, weather }, t) {
+function groundMessage(ground, t) {
+  if (!ground) return t("Aguardando magnetômetros");
+  if (!ground.fresh) return t("Dados terrestres atrasados");
+  if (ground.level === "high") return t("Substorm detectada na região");
+  if (ground.level === "elevated") return t("Magnetosfera reagindo agora");
+  return t("Campo geomagnético calmo");
+}
+
+function recommendation({ solar, oval, weather, ground }, t) {
   if (!solar || !oval || !weather?.current) return t("Coletando as fontes para a recomendação...");
 
-  const active = solar.driver >= 35 || solar.sustainedSouthward;
+  const happeningNow = ground?.fresh && ["elevated", "high"].includes(ground.level);
+  const active = solar.driver >= 35 || solar.sustainedSouthward || happeningNow;
   const ovalNearby = oval.localIntensity >= 20 || (oval.northIntensity ?? 0) >= 15;
   const localClear = weather.current.cloud <= 45;
   const localClosed = weather.current.cloud >= 75;
   const gap = weather.bestWindow;
 
+  if (happeningNow && localClear) {
+    return t("Atividade geomagnética detectada agora. Observe o céu e confira a câmera, mesmo que o Bz já tenha mudado.");
+  }
+  if (happeningNow && localClosed && gap && gap.cloud <= 45) {
+    return t("Substorm em andamento, mas o céu local está fechado. Há possível abertura no corredor norte.");
+  }
   if (active && ovalNearby && localClear) {
     return t("Boa combinação: observe o céu agora, principalmente para norte.");
   }
@@ -56,7 +71,7 @@ function Metric({ label, value, detail }) {
   );
 }
 
-export default function LocalForecastPanel({ solar, oval, weather, loading, error, updatedAt }) {
+export default function LocalForecastPanel({ solar, oval, weather, ground, loading, error, updatedAt }) {
   const { t } = useTranslation();
   const weatherDetail =
     weather?.current && Number.isFinite(weather.current.visibility)
@@ -99,7 +114,7 @@ export default function LocalForecastPanel({ solar, oval, weather, loading, erro
         </div>
       )}
 
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         <div className={"rounded-xl border p-3 " + toneForLevel(solar?.level)}>
           <div className="text-sm font-semibold text-white">{t("Atividade solar")}</div>
           <Metric
@@ -113,6 +128,24 @@ export default function LocalForecastPanel({ solar, oval, weather, loading, erro
           />
           <div className="mt-2 text-xs text-slate-200">
             {solar ? levelLabel(solar.level, t) + " · " + bzDetail : t("O score combina V, By, Bz e Bt transversal.")}
+          </div>
+        </div>
+
+        <div className={"rounded-xl border p-3 " + toneForLevel(ground?.level === "elevated" ? "moderate" : ground?.level)}>
+          <div className="text-sm font-semibold text-white">{t("Atividade no solo")}</div>
+          <Metric
+            label={t("Índice geomagnético local")}
+            value={ground?.fresh ? ground.score + "/100" : "--"}
+            detail={groundMessage(ground, t)}
+          />
+          <div className="mt-2 text-xs text-slate-200">
+            {ground?.fresh
+              ? t("{{count}} estações · ΔX oeste {{westward}} nT · faixa {{range}} nT", {
+                  count: ground.stationCount,
+                  westward: ground.westward,
+                  range: ground.range,
+                })
+              : t("Pello, Muonio e Ranua · dados FMI IMAGE")}
           </div>
         </div>
 
@@ -143,13 +176,13 @@ export default function LocalForecastPanel({ solar, oval, weather, loading, erro
 
       <div className="mt-4 rounded-xl border border-white/15 bg-black/20 p-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-auroraGreen">{t("Recomendação")}</div>
-        <p className="mt-1 text-sm text-white">{recommendation({ solar, oval, weather }, t)}</p>
+        <p className="mt-1 text-sm text-white">{recommendation({ solar, oval, weather, ground }, t)}</p>
       </div>
 
       {error && <p className="mt-3 text-xs text-amber-200">{error}</p>}
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-        {t("O driver é uma escala de orientação, não uma porcentagem de chance. O oval vem do NOAA OVATION; as nuvens são previsão horária do Open-Meteo. Confira a webcam antes de dirigir.")}
+        {t("O driver é uma escala de orientação, não uma porcentagem de chance. O oval vem do NOAA OVATION; a atividade terrestre usa magnetômetros FMI IMAGE (CC BY 4.0); as nuvens vêm do Open-Meteo. Confira a webcam antes de dirigir.")}
       </p>
     </section>
   );

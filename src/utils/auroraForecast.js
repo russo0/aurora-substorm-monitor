@@ -156,8 +156,12 @@ export function buildSolarAssessment({ bz, by, wind, bzHistory }) {
     .filter((record) => Number.isFinite(record.timestamp) && asNumber(record.bz) !== null)
     .sort((first, second) => first.timestamp - second.timestamp);
   const newest = datedHistory.at(-1)?.timestamp;
+  const historyAgeMinutes = Number.isFinite(newest)
+    ? Math.max(0, Math.round((Date.now() - newest) / 60000))
+    : null;
+  const historyFresh = historyAgeMinutes !== null && historyAgeMinutes <= 10;
   const lastHour =
-    newest === undefined
+    newest === undefined || !historyFresh
       ? []
       : datedHistory.filter((record) => record.timestamp >= newest - 60 * 60 * 1000);
   const southwardSamples = lastHour.filter((record) => record.bz <= -5).length;
@@ -185,6 +189,24 @@ export function buildSolarAssessment({ bz, by, wind, bzHistory }) {
     southwardSamples,
     sampleCount,
     sustainedSouthward,
+    historyAgeMinutes,
+    historyFresh,
+  };
+}
+
+export function buildGroundAssessment(payload, now = new Date()) {
+  const assessment = payload?.assessment;
+  const updatedAt = new Date(assessment?.updatedAt).getTime();
+  if (!assessment || !Number.isFinite(updatedAt)) return null;
+  const ageMinutes = Math.max(0, Math.round((now.getTime() - updatedAt) / 60000));
+  const fresh = ageMinutes <= 10;
+  return {
+    ...assessment,
+    level: fresh ? assessment.level : "stale",
+    fresh,
+    ageMinutes,
+    stations: Array.isArray(payload.stations) ? payload.stations : [],
+    source: payload.source ?? "FMI IMAGE",
   };
 }
 

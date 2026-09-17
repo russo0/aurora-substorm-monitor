@@ -8,6 +8,7 @@ import WindyCloudMap from "./components/WindyCloudMap";
 import WebcamGallery from "./components/WebcamGallery";
 import {
   WEATHER_POINTS,
+  buildGroundAssessment,
   buildOvationAssessment,
   buildSolarAssessment,
   buildWeatherAssessment,
@@ -43,6 +44,12 @@ async function fetchWeatherForecast() {
     throw new Error("Previsão do tempo respondeu com HTTP " + response.status);
   }
 
+  return response.json();
+}
+
+async function fetchGroundActivity() {
+  const response = await fetch("/api/magnetometers", { cache: "no-store" });
+  if (!response.ok) throw new Error("Magnetômetros responderam com HTTP " + response.status);
   return response.json();
 }
 
@@ -151,6 +158,7 @@ export default function App() {
   const [localForecast, setLocalForecast] = useState({
     oval: null,
     weather: null,
+    ground: null,
     loading: true,
     error: null,
     updatedAt: null,
@@ -205,6 +213,7 @@ export default function App() {
       );
       if (latestMag) {
         bz = numberOrNull(latestMag.bz_gsm);
+        by = numberOrNull(latestMag.by_gsm);
         bt = numberOrNull(latestMag.bt);
         magTime = latestMag.time_tag;
       }
@@ -226,14 +235,14 @@ export default function App() {
       const lastSixHours = history.filter(
         (record) => new Date(record.time_tag).getTime() >= sixHoursAgo
       );
-      const samples = lastSixHours.length > 0 ? lastSixHours : history.slice(-360);
+      const samples = lastSixHours;
       const latestHistoryMag = latestValidRecord(
         history,
         (record) => numberOrNull(record.by_gsm) !== null
       );
 
       if (latestHistoryMag) {
-        by = numberOrNull(latestHistoryMag.by_gsm);
+        if (by === null) by = numberOrNull(latestHistoryMag.by_gsm);
         if (bz === null) bz = numberOrNull(latestHistoryMag.bz_gsm);
         if (bt === null) bt = numberOrNull(latestHistoryMag.bt);
         if (!magTime) magTime = latestHistoryMag.time_tag;
@@ -257,22 +266,27 @@ export default function App() {
   const fetchLocalForecast = useCallback(async () => {
     setLocalForecast((current) => ({ ...current, loading: true, error: null }));
 
-    const [ovalResult, weatherResult] = await Promise.allSettled([
+    const [ovalResult, weatherResult, groundResult] = await Promise.allSettled([
       fetchNoaaJson("/json/ovation_aurora_latest.json"),
       fetchWeatherForecast(),
+      fetchGroundActivity(),
     ]);
     const errors = [];
     const oval =
       ovalResult.status === "fulfilled" ? buildOvationAssessment(ovalResult.value) : null;
     const weather =
       weatherResult.status === "fulfilled" ? buildWeatherAssessment(weatherResult.value) : null;
+    const ground =
+      groundResult.status === "fulfilled" ? buildGroundAssessment(groundResult.value) : null;
 
     if (ovalResult.status === "rejected") errors.push("Não foi possível atualizar o oval da NOAA.");
     if (weatherResult.status === "rejected") errors.push("Não foi possível atualizar a previsão de nuvens.");
+    if (groundResult.status === "rejected") errors.push("Não foi possível atualizar os magnetômetros locais.");
 
     setLocalForecast({
       oval,
       weather,
+      ground,
       loading: false,
       error: errors.length ? errors.join(" ") : null,
       updatedAt: new Date().toLocaleTimeString(),
@@ -390,6 +404,7 @@ export default function App() {
           solar={solar}
           oval={localForecast.oval}
           weather={localForecast.weather}
+          ground={localForecast.ground}
           loading={localForecast.loading}
           error={localForecast.error}
           updatedAt={localForecast.updatedAt}
