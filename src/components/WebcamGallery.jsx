@@ -14,7 +14,7 @@ const WEBCAMS = [
     title: "Överkalix, Sweden",
     country: "Sweden",
     type: "youtube",
-    url: "https://www.youtube.com/watch?v=mdajYIDKf64",
+    url: "https://youtube.com/live/1BOTxSJG9N4",
     videoId: "mdajYIDKf64"
   },
   {
