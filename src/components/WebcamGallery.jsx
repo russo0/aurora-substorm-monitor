@@ -15,7 +15,7 @@ const WEBCAMS = [
     country: "Sweden",
     type: "youtube",
     url: "https://www.youtube.com/embed/live_stream?channel=UCeKYE9I5zaMd4hmpoDLv47Q",
-    videoId: "mdajYIDKf64"
+    videoId: "UCeKYE9I5zaMd4hmpoDLv47Q"
   },
   {
     id: "Levi",
