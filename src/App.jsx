@@ -6,6 +6,8 @@ import BzChart from "./components/BzChart";
 import LocalForecastPanel from "./components/LocalForecastPanel";
 import WindyCloudMap from "./components/WindyCloudMap";
 import WebcamGallery from "./components/WebcamGallery";
+import HuxtForecast from "./components/HuxtForecast";
+import AuroraJournal from "./components/AuroraJournal";
 import {
   WEATHER_POINTS,
   buildGroundAssessment,
@@ -401,6 +403,7 @@ export default function App() {
           <span className="text-xl font-semibold">{t(chance)}</span>
         </div>
 
+        <HuxtForecast />
         <LocalForecastPanel
           solar={solar}
           oval={localForecast.oval}
@@ -423,6 +426,9 @@ export default function App() {
         </div>
         <div className="mt-2 text-xs text-white">
           {t("Última atualização")}: {lastUpdate ?? "--"}
+        </div>
+        <div className="mt-6 w-full">
+          <AuroraJournal data={data} />
         </div>
       </div>
       <WebcamGallery />
