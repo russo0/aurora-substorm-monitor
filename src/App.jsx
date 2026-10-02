@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import "./i18n";
 import { useTranslation } from "react-i18next";
 import DataCard from "./components/DataCard";
@@ -7,7 +7,6 @@ import LocalForecastPanel from "./components/LocalForecastPanel";
 import WindyCloudMap from "./components/WindyCloudMap";
 import WebcamGallery from "./components/WebcamGallery";
 import HuxtForecast from "./components/HuxtForecast";
-import AuroraJournal from "./components/AuroraJournal";
 import {
   WEATHER_POINTS,
   buildGroundAssessment,
@@ -18,6 +17,13 @@ import {
 
 const NOAA_BASE_URL = "https://services.swpc.noaa.gov";
 const NOAA_PROXY_URL = "https://proxy-noaa.russosec.workers.dev/";
+
+// The observation journal is intentionally local only. Vite replaces
+// import.meta.env.DEV at build time, so the public production site never
+// loads the form or exposes a place for visitors to write observations.
+const AuroraJournal = import.meta.env.DEV
+  ? lazy(() => import("./components/AuroraJournal"))
+  : null;
 
 async function fetchNoaaJson(path) {
   const targetUrl = NOAA_BASE_URL + path;
@@ -427,9 +433,13 @@ export default function App() {
         <div className="mt-2 text-xs text-white">
           {t("Última atualização")}: {lastUpdate ?? "--"}
         </div>
-        <div className="mt-6 w-full">
-          <AuroraJournal data={data} />
-        </div>
+        {AuroraJournal && (
+          <div className="mt-6 w-full">
+            <Suspense fallback={null}>
+              <AuroraJournal data={data} />
+            </Suspense>
+          </div>
+        )}
       </div>
       <WebcamGallery />
     </div>
