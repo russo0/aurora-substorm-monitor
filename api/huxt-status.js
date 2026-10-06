@@ -1,7 +1,7 @@
 import { HUXT_FORECAST_PAGE, HUXT_VIDEO_URL, getHuxtStatus } from "../src/utils/huxtStatus.js";
 
 function cacheResponse(response) {
-  response.setHeader("Cache-Control", "public, s-maxage=900, must-revalidate");
+  response.setHeader("Cache-Control", "no-store, max-age=0");
   response.setHeader("Content-Type", "application/json; charset=utf-8");
 }
 

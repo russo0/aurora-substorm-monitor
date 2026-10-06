@@ -5,6 +5,16 @@ const HUXT_STATUS_URL = "/api/huxt-status";
 const FALLBACK_FORECAST_PAGE = "https://swxforecastlab.org/forecasts.html";
 const HUXT_AUTO_REFRESH_MS = 15 * 60 * 1000;
 
+function huxtStatusUrl(forceRefresh = false) {
+  // Cloudflare caches this custom-domain route more aggressively than its
+  // origin headers. A shared 15-minute key keeps automatic checks current
+  // without creating a unique cache entry for every visitor.
+  const refreshKey = forceRefresh
+    ? Date.now()
+    : Math.floor(Date.now() / HUXT_AUTO_REFRESH_MS);
+  return `${HUXT_STATUS_URL}?refresh=${refreshKey}`;
+}
+
 function formatDate(value, language) {
   if (!value || Number.isNaN(new Date(value).getTime())) return "--";
 
@@ -19,7 +29,7 @@ export default function HuxtForecast() {
   const { t, i18n } = useTranslation();
   const [status, setStatus] = useState({ loading: true, refreshing: false, data: null, error: null });
 
-  const loadStatus = useCallback(async () => {
+  const loadStatus = useCallback(async (forceRefresh = false) => {
     setStatus((previous) => ({
       ...previous,
       loading: !previous.data,
@@ -27,7 +37,7 @@ export default function HuxtForecast() {
       error: null,
     }));
     try {
-      const response = await fetch(HUXT_STATUS_URL, { cache: "no-store" });
+      const response = await fetch(huxtStatusUrl(forceRefresh), { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
       setStatus({ loading: false, refreshing: false, data, error: null });
@@ -42,8 +52,8 @@ export default function HuxtForecast() {
   }, []);
 
   useEffect(() => {
-    loadStatus();
-    const intervalId = window.setInterval(loadStatus, HUXT_AUTO_REFRESH_MS);
+    loadStatus(true);
+    const intervalId = window.setInterval(() => loadStatus(), HUXT_AUTO_REFRESH_MS);
 
     return () => window.clearInterval(intervalId);
   }, [loadStatus]);
@@ -61,7 +71,7 @@ export default function HuxtForecast() {
         </div>
         <button
           type="button"
-          onClick={loadStatus}
+          onClick={() => loadStatus(true)}
           disabled={status.loading || status.refreshing}
           className="shrink-0 rounded-lg border border-auroraGreen !bg-auroraGreen px-3 py-2 text-sm font-semibold !text-[#061018] transition hover:border-white hover:!bg-white disabled:cursor-wait disabled:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-auroraGreen"
         >
