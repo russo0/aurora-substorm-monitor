@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 const HUXT_STATUS_URL = "/api/huxt-status";
 const FALLBACK_FORECAST_PAGE = "https://swxforecastlab.org/forecasts.html";
+const HUXT_AUTO_REFRESH_MS = 15 * 60 * 1000;
 
 function formatDate(value, language) {
   if (!value || Number.isNaN(new Date(value).getTime())) return "--";
@@ -16,26 +17,35 @@ function formatDate(value, language) {
 
 export default function HuxtForecast() {
   const { t, i18n } = useTranslation();
-  const [status, setStatus] = useState({ loading: true, data: null, error: null });
+  const [status, setStatus] = useState({ loading: true, refreshing: false, data: null, error: null });
 
   const loadStatus = useCallback(async () => {
-    setStatus((previous) => ({ ...previous, loading: true, error: null }));
+    setStatus((previous) => ({
+      ...previous,
+      loading: !previous.data,
+      refreshing: Boolean(previous.data),
+      error: null,
+    }));
     try {
       const response = await fetch(HUXT_STATUS_URL, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-      setStatus({ loading: false, data, error: null });
+      setStatus({ loading: false, refreshing: false, data, error: null });
     } catch (error) {
-      setStatus({
+      setStatus((previous) => ({
         loading: false,
-        data: null,
+        refreshing: false,
+        data: previous.data,
         error: error instanceof Error ? error.message : "Unable to check HUXt",
-      });
+      }));
     }
   }, []);
 
   useEffect(() => {
     loadStatus();
+    const intervalId = window.setInterval(loadStatus, HUXT_AUTO_REFRESH_MS);
+
+    return () => window.clearInterval(intervalId);
   }, [loadStatus]);
 
   const sourcePage = status.data?.forecastPage || FALLBACK_FORECAST_PAGE;
@@ -49,7 +59,12 @@ export default function HuxtForecast() {
           <h2 id="huxt-heading" className="mt-1 text-xl font-semibold text-white">{t("Solar wind en route")}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">{t("HUXt description")}</p>
         </div>
-        <button type="button" onClick={loadStatus} className="shrink-0 rounded-lg border border-slate-500 px-3 py-2 text-sm text-slate-100 transition hover:border-auroraGreen hover:text-auroraGreen">
+        <button
+          type="button"
+          onClick={loadStatus}
+          disabled={status.loading || status.refreshing}
+          className="shrink-0 rounded-lg border border-auroraGreen !bg-auroraGreen px-3 py-2 text-sm font-semibold !text-[#061018] transition hover:border-white hover:!bg-white disabled:cursor-wait disabled:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-auroraGreen"
+        >
           {t("Check source")}
         </button>
       </div>
