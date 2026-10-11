@@ -1,12 +1,16 @@
-# React + Vite
+# Aurora Substorm Monitor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Diário pessoal de observações
 
-Currently, two official plugins are available:
+O diário que registra aurora vista em Överkalix é uma ferramenta pessoal. Ele não aparece no site público e não envia registros para terceiros.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Para usá-lo no seu computador:
 
-## Expanding the ESLint configuration
+1. Abra este repositório no Terminal.
+2. Execute `npm install` apenas na primeira vez.
+3. Execute `npm run journal`.
+4. O navegador abrirá o endereço local, normalmente `http://127.0.0.1:5173`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Deixe a janela do Terminal aberta enquanto estiver registrando as observações. Para encerrar, use `Ctrl + C` nessa janela.
+
+Os dados ficam apenas no perfil deste navegador. Use o botão **Exportar JSON** regularmente para manter uma cópia permanente. Uma futura versão com histórico compartilhado e gráficos deve usar banco de dados com autenticação, nunca um formulário público.

@@ -1,10 +1,44 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { HUXT_FORECAST_PAGE, HUXT_VIDEO_URL, getHuxtStatus } from './src/utils/huxtStatus.js';
+
+function huxtStatusDevelopmentApi() {
+  return {
+    name: 'huxt-status-development-api',
+    configureServer(server) {
+      server.middlewares.use('/api/huxt-status', async (request, response) => {
+        response.setHeader('Content-Type', 'application/json; charset=utf-8');
+        response.setHeader('Cache-Control', 'no-store');
+
+        if (request.method !== 'GET') {
+          response.statusCode = 405;
+          response.setHeader('Allow', 'GET');
+          response.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        try {
+          response.end(JSON.stringify(await getHuxtStatus()));
+        } catch (error) {
+          response.statusCode = 502;
+          response.end(JSON.stringify({
+            available: false,
+            sourceUrl: HUXT_VIDEO_URL,
+            forecastPage: HUXT_FORECAST_PAGE,
+            checkedAt: new Date().toISOString(),
+            error: error instanceof Error ? error.message : 'Unable to check the HUXt source',
+          }));
+        }
+      });
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [
     react(),
+    huxtStatusDevelopmentApi(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
