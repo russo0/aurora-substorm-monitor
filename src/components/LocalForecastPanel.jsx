@@ -34,7 +34,8 @@ function recommendation({ solar, oval, weather, ground }, t) {
   if (!solar || !oval || !weather?.current) return t("Coletando as fontes para a recomendação...");
 
   const happeningNow = ground?.fresh && ["elevated", "high"].includes(ground.level);
-  const active = solar.driver >= 35 || solar.sustainedSouthward || happeningNow;
+  const stormActive = ["elevated", "high"].includes(solar.stormContext);
+  const active = solar.driver >= 35 || solar.sustainedSouthward || stormActive || happeningNow;
   const ovalNearby = oval.localIntensity >= 20 || (oval.northIntensity ?? 0) >= 15;
   const localClear = weather.current.cloud <= 45;
   const localClosed = weather.current.cloud >= 75;
@@ -81,6 +82,12 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
     solar && solar.sampleCount
       ? t("{{count}} min com Bz ≤ -5 nT na última hora", { count: solar.southwardSamples })
       : t("Histórico sendo carregado");
+  const stormDetail =
+    solar?.stormContext === "high"
+      ? t("Magnetosfera ainda energizada após atividade forte")
+      : solar?.stormContext === "elevated"
+        ? t("Atividade residual: novas expansões continuam possíveis")
+        : null;
   const northDetail =
     oval?.northIntensity !== null && oval?.northIntensity !== undefined
       ? t("{{value}}/100 a {{direction}}, ~{{distance}} km", {
@@ -127,7 +134,9 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
             }) : t("Aguardando dados solares")}
           />
           <div className="mt-2 text-xs text-slate-200">
-            {solar ? levelLabel(solar.level, t) + " · " + bzDetail : t("O score combina V, By, Bz e Bt transversal.")}
+            {solar
+              ? levelLabel(solar.level, t) + " · " + (stormDetail ?? bzDetail)
+              : t("O score combina V, By, Bz e Bt transversal.")}
           </div>
         </div>
 
@@ -145,7 +154,7 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
                   westward: ground.westward,
                   range: ground.range,
                 })
-              : t("Pello, Muonio e Ranua · dados FMI IMAGE")}
+              : t("Pello, Muonio, Ranua e Kiruna · rede IMAGE")}
           </div>
         </div>
 
@@ -182,7 +191,7 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
       {error && <p className="mt-3 text-xs text-amber-200">{error}</p>}
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-        {t("O driver é uma escala de orientação, não uma porcentagem de chance. O oval vem do NOAA OVATION; a atividade terrestre usa magnetômetros FMI IMAGE (CC BY 4.0); as nuvens vêm do Open-Meteo. Confira a webcam antes de dirigir.")}
+        {t("O driver mede a entrada solar atual. O estado geral também considera memória da tempestade, oval NOAA OVATION e magnetômetros IMAGE de FMI e IRF. As nuvens vêm do Open-Meteo. Confira a webcam antes de dirigir.")}
       </p>
     </section>
   );
