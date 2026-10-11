@@ -2,6 +2,7 @@ const STATIONS = [
   { id: "PEL", name: "Pello" },
   { id: "MUO", name: "Muonio" },
   { id: "RAN", name: "Ranua" },
+  { id: "KIR", name: "Kiruna", provider: "IRF" },
 ];
 const ROOT = "https://space.fmi.fi/image/realtime/UT";
 
@@ -57,11 +58,29 @@ function assess(stations) {
   const westward = Math.max(0, ...available.map((station) => -station.deltaX));
   const range = Math.max(...available.map((station) => station.rangeX));
   const rate = Math.max(...available.map((station) => station.maxRate));
+  const activeStationCount = available.filter(
+    (station) => station.deltaX <= -30 || station.rangeX >= 90 || station.maxRate >= 8
+  ).length;
   const score = Math.round(Math.min(100, Math.min(100, westward / 2.5) * 0.5 + Math.min(100, range / 4.5) * 0.3 + Math.min(100, rate / 0.4) * 0.2));
   let level = "quiet";
-  if (score >= 65 || westward >= 180 || range >= 400) level = "high";
-  else if (score >= 28 || westward >= 60 || range >= 140) level = "elevated";
-  return { score, level, westward, range, rate, stationCount: available.length, updatedAt: available.map((station) => station.updatedAt).sort().at(-1) };
+  if (score >= 60 || westward >= 150 || range >= 300 || rate >= 25) level = "high";
+  else if (
+    score >= 22 ||
+    westward >= 40 ||
+    range >= 100 ||
+    rate >= 12 ||
+    activeStationCount >= 2
+  ) level = "elevated";
+  return {
+    score,
+    level,
+    westward,
+    range,
+    rate,
+    activeStationCount,
+    stationCount: available.length,
+    updatedAt: available.map((station) => station.updatedAt).sort().at(-1),
+  };
 }
 
 export default async function handler(_request, response) {
@@ -71,7 +90,11 @@ export default async function handler(_request, response) {
       return upstream.ok ? parseStation(await upstream.text(), station) : { ...station, available: false };
     }));
     response.setHeader("Cache-Control", "public, s-maxage=45, stale-while-revalidate=120");
-    response.status(200).json({ assessment: assess(stations), stations, source: "FMI IMAGE", license: "CC BY 4.0" });
+    response.status(200).json({
+      assessment: assess(stations),
+      stations,
+      source: "IMAGE network (FMI / IRF)",
+    });
   } catch {
     response.status(502).json({ error: "Magnetometer data is temporarily unavailable." });
   }

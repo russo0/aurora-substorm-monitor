@@ -136,7 +136,7 @@ function readWeatherHour(dataset, point, index) {
   };
 }
 
-export function buildSolarAssessment({ bz, by, wind, bzHistory }) {
+export function buildSolarAssessment({ bz, by, wind, kp, bzHistory }) {
   const latestBz = asNumber(bz);
   const latestBy = asNumber(by);
   const latestWind = asNumber(wind);
@@ -168,6 +168,30 @@ export function buildSolarAssessment({ bz, by, wind, bzHistory }) {
   const sampleCount = lastHour.length;
   const sustainedSouthward = sampleCount >= 30 && southwardSamples / sampleCount >= 0.7;
   const medianBz = median(lastHour.map((record) => asNumber(record.bz)));
+  const lastSixHours =
+    newest === undefined || !historyFresh
+      ? []
+      : datedHistory.filter((record) => record.timestamp >= newest - 6 * 60 * 60 * 1000);
+  const energizingSamples = lastSixHours.filter((record) => {
+    const sampleBz = asNumber(record.bz);
+    const sampleBt = asNumber(record.bt);
+    return sampleBz !== null && sampleBt !== null && sampleBz <= -4 && sampleBt >= 8;
+  });
+  const lastEnergizingTimestamp = energizingSamples.at(-1)?.timestamp;
+  const energyAgeMinutes = Number.isFinite(lastEnergizingTimestamp)
+    ? Math.max(0, Math.round((newest - lastEnergizingTimestamp) / 60000))
+    : null;
+  const observedKp = asNumber(kp);
+
+  let stormContext = "quiet";
+  if ((observedKp !== null && observedKp >= 5) || (energyAgeMinutes !== null && energyAgeMinutes <= 180)) {
+    stormContext = "high";
+  } else if (
+    (observedKp !== null && observedKp >= 4) ||
+    (energyAgeMinutes !== null && energyAgeMinutes <= 360)
+  ) {
+    stormContext = "elevated";
+  }
 
   let level = "low";
   if ((driver >= 65 && sustainedSouthward) || (driver >= 80 && latestBz <= -5)) {
@@ -191,7 +215,21 @@ export function buildSolarAssessment({ bz, by, wind, bzHistory }) {
     sustainedSouthward,
     historyAgeMinutes,
     historyFresh,
+    observedKp,
+    stormContext,
+    energyAgeMinutes,
+    energizingSampleCount: energizingSamples.length,
   };
+}
+
+export function getAuroraChance({ solar, ground, oval }) {
+  const groundNow = ground?.fresh ? ground.level : null;
+  if (groundNow === "high" || solar?.level === "high") return "Alta";
+  if (groundNow === "elevated") return "Moderada";
+  if (["high", "elevated"].includes(solar?.stormContext)) return "Moderada";
+  if (solar?.level === "moderate" || solar?.sustainedSouthward) return "Moderada";
+  if (oval?.outlook === "overhead" && (ground?.score ?? 0) >= 10) return "Moderada";
+  return "Baixa";
 }
 
 export function buildGroundAssessment(payload, now = new Date()) {
@@ -206,7 +244,7 @@ export function buildGroundAssessment(payload, now = new Date()) {
     fresh,
     ageMinutes,
     stations: Array.isArray(payload.stations) ? payload.stations : [],
-    source: payload.source ?? "FMI IMAGE",
+    source: payload.source ?? "IMAGE network",
   };
 }
 

@@ -10,6 +10,7 @@ import HuxtForecast from "./components/HuxtForecast";
 import {
   WEATHER_POINTS,
   buildGroundAssessment,
+  getAuroraChance,
   buildOvationAssessment,
   buildSolarAssessment,
   buildWeatherAssessment,
@@ -108,28 +109,6 @@ function usePWANewVersion() {
   };
 
   return showBanner ? updateApp : null;
-}
-
-function getChance(bzHistory, wind, bt) {
-  if (!Array.isArray(bzHistory) || !Number.isFinite(wind) || !Number.isFinite(bt)) {
-    return "Baixa";
-  }
-
-  let countBz6 = 0;
-  let countBz7 = 0;
-  let countBz4 = 0;
-  bzHistory.forEach((item) => {
-    if (item.bz <= -4) countBz4 += 1;
-    if (item.bz <= -6) countBz6 += 1;
-    if (item.bz <= -7) countBz7 += 1;
-  });
-  if ((countBz6 >= 30 && wind >= 500 && bt >= 10) || (countBz7 >= 15 && bt >= 10)) {
-    return "Alta";
-  }
-  if ((countBz4 >= 15 && wind >= 400 && bt >= 7) || (countBz6 >= 10 && bt >= 8)) {
-    return "Moderada";
-  }
-  return "Baixa";
 }
 
 function getColor(type, value) {
@@ -319,8 +298,14 @@ export default function App() {
     fetchLocalForecast();
   };
 
-  const chance = getChance(data.bzHistory, data.wind, data.bt);
   const solar = buildSolarAssessment(data);
+  const chance = getAuroraChance({
+    solar,
+    ground: localForecast.ground,
+    oval: localForecast.oval,
+  });
+  const groundActivityNow =
+    localForecast.ground?.fresh && ["elevated", "high"].includes(localForecast.ground.level);
   const portugueseSelected = i18n.language === "pt";
   const englishSelected = i18n.language === "en";
 
@@ -400,12 +385,14 @@ export default function App() {
         {chance === "Alta" && (
           <div className="mb-2 flex w-full flex-col items-center rounded-xl bg-auroraPurple/80 p-4 shadow-lg animate-pulse">
             <div className="text-xl font-bold tracking-wider text-white">{t("ALERTA!")}</div>
-            <div className="font-medium text-white">{t("Alerta! Alta chance de subtempestade!")}</div>
+            <div className="font-medium text-white">
+              {t(groundActivityNow ? "Atividade geomagnética forte detectada na região!" : "Alerta! Alta chance de subtempestade!")}
+            </div>
           </div>
         )}
 
         <div className="mb-3 flex items-center gap-2 text-lg text-white">
-          <span>{t("Chance de Subtempestade")}:</span>
+          <span>{t("Condição auroral local")}:</span>
           <span className="text-xl font-semibold">{t(chance)}</span>
         </div>
 
