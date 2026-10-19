@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { formatForecastHour } from "../utils/auroraForecast";
+import { buildObservationAssessment, formatForecastHour } from "../utils/auroraForecast";
 
 function toneForLevel(level) {
   if (level === "high") return "border-auroraPurple bg-auroraPurple/15";
@@ -30,8 +30,31 @@ function groundMessage(ground, t) {
   return t("Campo geomagnético calmo");
 }
 
-function recommendation({ solar, oval, weather, ground }, t) {
+function observationLabel(observation, t) {
+  if (observation.status === "possible") {
+    return observation.location === "horizon"
+      ? t("Possível no horizonte a {{direction}}", { direction: t(observation.direction) })
+      : t("Possível sobre a região");
+  }
+  const labels = {
+    "cloud-gaps": "Visibilidade incerta entre nuvens",
+    cloudy: "Visibilidade prejudicada por nuvens",
+    daylight: "Luz do dia limita a observação",
+    twilight: "Crepúsculo limita a observação",
+    stale: "Oval desatualizado",
+    unavailable: "Aguardando dados para avaliar a observação",
+    weak: "Pouco sinal no modelo",
+  };
+  return t(labels[observation.status]);
+}
+
+function recommendation({ solar, oval, weather, ground, observation }, t) {
   if (!solar || !oval || !weather?.current) return t("Coletando as fontes para a recomendação...");
+  if (observation.status === "unavailable") return t("Coletando as fontes para a recomendação...");
+  if (observation.status === "stale") return t("O oval está atrasado. Confira o céu e a câmera enquanto aguardamos dados atualizados.");
+  if (["daylight", "twilight"].includes(observation.status)) {
+    return t("A claridade dificulta observar aurora fraca. Acompanhe as condições quando o céu escurecer.");
+  }
 
   const happeningNow = ground?.fresh && ["elevated", "high"].includes(ground.level);
   const stormActive = ["elevated", "high"].includes(solar.stormContext);
@@ -47,6 +70,15 @@ function recommendation({ solar, oval, weather, ground }, t) {
   if (happeningNow && localClosed && gap && gap.cloud <= 45) {
     return t("Substorm em andamento, mas o céu local está fechado. Há possível abertura no corredor norte.");
   }
+  if (observation.status === "possible" && observation.location === "horizon") {
+    return t("O oval sugere aurora ao norte, possivelmente baixa no horizonte. Com o céu local favorável, vale observar e conferir a câmera, mesmo com atividade geomagnética baixa.");
+  }
+  if (observation.status === "possible" && observation.location === "overhead") {
+    return t("O oval sugere aurora sobre a região e o céu local está favorável. Confira o céu e a câmera.");
+  }
+  if (observation.status === "cloud-gaps") {
+    return t("Há sinal de aurora no modelo, mas as nuvens tornam a observação incerta. Confira as aberturas e a câmera.");
+  }
   if (active && ovalNearby && localClear) {
     return t("Boa combinação: observe o céu agora, principalmente para norte.");
   }
@@ -56,10 +88,10 @@ function recommendation({ solar, oval, weather, ground }, t) {
   if (active && ovalNearby) {
     return t("Atividade promissora; acompanhe o céu e a webcam antes de sair.");
   }
-  if (weather.current.cloud > 75) {
+  if (weather.current.cloud >= 75) {
     return t("Mesmo com atividade, o céu fechado é o principal limitador agora.");
   }
-  return t("Ainda falta uma combinação melhor de atividade solar e posição do oval.");
+  return t("O modelo mostra pouco sinal agora. Aurora fraca ainda pode escapar da previsão; confira o céu e a câmera se estiver limpo.");
 }
 
 function Metric({ label, value, detail }) {
@@ -74,14 +106,18 @@ function Metric({ label, value, detail }) {
 
 export default function LocalForecastPanel({ solar, oval, weather, ground, loading, error, updatedAt }) {
   const { t } = useTranslation();
+  const observation = buildObservationAssessment({ oval, weather });
   const weatherDetail =
     weather?.current && Number.isFinite(weather.current.visibility)
       ? t("Visibilidade {{value}} km", { value: Math.round(weather.current.visibility / 1000) })
       : t("Visibilidade indisponível");
-  const bzDetail =
-    solar && solar.sampleCount
-      ? t("{{count}} min com Bz ≤ -5 nT na última hora", { count: solar.southwardSamples })
-      : t("Histórico sendo carregado");
+  const bzDetail = solar?.historyStatus === "stale"
+    ? t("Histórico solar atrasado: {{count}} min", { count: solar.historyAgeMinutes })
+    : solar?.historyStatus === "unavailable"
+      ? t("Histórico solar indisponível")
+      : solar?.sampleCount
+        ? t("{{count}} amostras com Bz ≤ -5 nT na última hora", { count: solar.southwardSamples })
+        : t("Histórico sendo carregado");
   const stormDetail =
     solar?.stormContext === "high"
       ? t("Magnetosfera ainda energizada após atividade forte")
@@ -92,7 +128,7 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
     oval?.northIntensity !== null && oval?.northIntensity !== undefined
       ? t("{{value}}/100 a {{direction}}, ~{{distance}} km", {
           value: oval.northIntensity,
-          direction: oval.northDirection,
+          direction: t(oval.northDirection),
           distance: oval.northDistanceKm,
         })
       : t("Sem sinal ao norte no modelo");
@@ -135,7 +171,7 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
           />
           <div className="mt-2 text-xs text-slate-200">
             {solar
-              ? levelLabel(solar.level, t) + " · " + (stormDetail ?? bzDetail)
+              ? levelLabel(solar.level, t) + " · " + bzDetail + (stormDetail ? " · " + stormDetail : "")
               : t("O score combina V, By, Bz e Bt transversal.")}
           </div>
         </div>
@@ -185,7 +221,8 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
 
       <div className="mt-4 rounded-xl border border-white/15 bg-black/20 p-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-auroraGreen">{t("Recomendação")}</div>
-        <p className="mt-1 text-sm text-white">{recommendation({ solar, oval, weather, ground }, t)}</p>
+        <p className="mt-1 text-base font-semibold text-white">{observationLabel(observation, t)}</p>
+        <p className="mt-1 text-sm text-white">{recommendation({ solar, oval, weather, ground, observation }, t)}</p>
       </div>
 
       {error && <p className="mt-3 text-xs text-amber-200">{error}</p>}

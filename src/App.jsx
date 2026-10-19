@@ -7,6 +7,7 @@ import LocalForecastPanel from "./components/LocalForecastPanel";
 import WindyCloudMap from "./components/WindyCloudMap";
 import WebcamGallery from "./components/WebcamGallery";
 import HuxtForecast from "./components/HuxtForecast";
+import { parseNoaaTimestamp } from "./utils/noaaTime";
 import {
   WEATHER_POINTS,
   buildGroundAssessment,
@@ -64,6 +65,7 @@ async function fetchGroundActivity() {
 }
 
 function numberOrNull(value) {
+  if (value === null || value === undefined || value === "" || typeof value === "boolean") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -73,7 +75,7 @@ function latestValidRecord(records, isValid) {
 
   return records
     .filter((record) => record && isValid(record))
-    .sort((first, second) => new Date(second.time_tag) - new Date(first.time_tag))[0] ?? null;
+    .sort((first, second) => parseNoaaTimestamp(second.time_tag) - parseNoaaTimestamp(first.time_tag))[0] ?? null;
 }
 
 function usePWANewVersion() {
@@ -215,13 +217,13 @@ export default function App() {
         .filter(
           (record) =>
             record?.active !== false &&
-            Number.isFinite(new Date(record.time_tag).getTime()) &&
+            Number.isFinite(parseNoaaTimestamp(record.time_tag)) &&
             numberOrNull(record.bz_gsm) !== null &&
             numberOrNull(record.bt) !== null
         )
-        .sort((first, second) => new Date(first.time_tag) - new Date(second.time_tag));
+        .sort((first, second) => parseNoaaTimestamp(first.time_tag) - parseNoaaTimestamp(second.time_tag));
       const lastSixHours = history.filter(
-        (record) => new Date(record.time_tag).getTime() >= sixHoursAgo
+        (record) => parseNoaaTimestamp(record.time_tag) >= sixHoursAgo
       );
       const samples = lastSixHours;
       const latestHistoryMag = latestValidRecord(
@@ -392,7 +394,7 @@ export default function App() {
         )}
 
         <div className="mb-3 flex items-center gap-2 text-lg text-white">
-          <span>{t("Condição auroral local")}:</span>
+          <span>{t("Atividade auroral regional")}:</span>
           <span className="text-xl font-semibold">{t(chance)}</span>
         </div>
 
