@@ -1,3 +1,6 @@
+import SunCalc from "suncalc";
+import { parseNoaaTimestamp } from "./noaaTime.js";
+
 export const OVERKALIX = Object.freeze({
   name: "Överkalix",
   latitude: 66.327,
@@ -11,6 +14,7 @@ const toRadians = (value) => (value * Math.PI) / 180;
 const toDegrees = (value) => (value * 180) / Math.PI;
 
 function asNumber(value) {
+  if (value === null || value === undefined || value === "" || typeof value === "boolean") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -152,8 +156,8 @@ export function buildSolarAssessment({ bz, by, wind, kp, bzHistory }) {
   const driver = Math.round(clamp(((coupling - 4000) / 26000) * 100, 0, 100));
   const history = Array.isArray(bzHistory) ? bzHistory : [];
   const datedHistory = history
-    .map((record) => ({ ...record, timestamp: new Date(record.timeTag).getTime() }))
-    .filter((record) => Number.isFinite(record.timestamp) && asNumber(record.bz) !== null)
+    .map((record) => ({ ...record, timestamp: parseNoaaTimestamp(record.timeTag) }))
+    .filter((record) => Number.isFinite(record.timestamp) && record.timestamp <= Date.now() + 60000 && asNumber(record.bz) !== null)
     .sort((first, second) => first.timestamp - second.timestamp);
   const newest = datedHistory.at(-1)?.timestamp;
   const historyAgeMinutes = Number.isFinite(newest)
@@ -215,6 +219,7 @@ export function buildSolarAssessment({ bz, by, wind, kp, bzHistory }) {
     sustainedSouthward,
     historyAgeMinutes,
     historyFresh,
+    historyStatus: newest === undefined ? "unavailable" : historyFresh ? "current" : "stale",
     observedKp,
     stormContext,
     energyAgeMinutes,
@@ -230,6 +235,34 @@ export function getAuroraChance({ solar, ground, oval }) {
   if (solar?.level === "moderate" || solar?.sustainedSouthward) return "Moderada";
   if (oval?.outlook === "overhead" && (ground?.score ?? 0) >= 10) return "Moderada";
   return "Baixa";
+}
+
+export function buildObservationAssessment({ oval, weather }, now = new Date()) {
+  const cloud = asNumber(weather?.current?.cloud);
+  if (!oval || cloud === null) return { status: "unavailable" };
+
+  const modelTime = parseNoaaTimestamp(oval.forecastTime ?? oval.observationTime);
+  if (!Number.isFinite(modelTime)) return { status: "unavailable" };
+  const ageMinutes = (now.getTime() - modelTime) / 60000;
+  if (ageMinutes > 45 || ageMinutes < -90) return { status: "stale" };
+
+  const sunAltitude = toDegrees(SunCalc.getPosition(now, OVERKALIX.latitude, OVERKALIX.longitude).altitude);
+  if (sunAltitude >= 0) return { status: "daylight" };
+  if (sunAltitude > -6) return { status: "twilight" };
+  if (cloud >= 75) return { status: "cloudy" };
+
+  // Reuse the weak northern signal already shown on the oval card. This is
+  // an observing hint, not a calibrated probability or a substorm trigger.
+  const horizonSignal = oval.northIntensity >= 8 &&
+    oval.northDistanceKm >= 25 && oval.northDistanceKm <= 550;
+  const location = oval.localIntensity >= 25 ? "overhead" : horizonSignal ? "horizon" : null;
+  if (!location) return { status: "weak" };
+  return {
+    status: cloud <= 45 ? "possible" : "cloud-gaps",
+    location,
+    direction: oval.northDirection,
+    distanceKm: oval.northDistanceKm,
+  };
 }
 
 export function buildGroundAssessment(payload, now = new Date()) {
