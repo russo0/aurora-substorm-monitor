@@ -1,14 +1,5 @@
-const STATIONS = [
-  { id: "PEL", name: "Pello" },
-  { id: "MUO", name: "Muonio" },
-  { id: "RAN", name: "Ranua" },
-  {
-    id: "KIR",
-    name: "Kiruna",
-    provider: "IRF",
-    url: "https://www2.irf.se/maggraphs/rt_iaga_last_hour_1min_primary.txt",
-  },
-];
+import { DEFAULT_STATION_IDS, MAGNETOMETER_STATIONS } from "../src/utils/magnetometerStations.js";
+
 const ROOT = "https://space.fmi.fi/image/realtime/UT";
 
 const median = (values) => {
@@ -23,7 +14,7 @@ const mean = (values) => {
   return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
 };
 
-function parseStation(text, station, now = Date.now()) {
+export function parseStation(text, station, now = Date.now()) {
   const rawSamples = text.split(/\r?\n/).map((line) => line.trim().split(/\s+/))
     .map((parts) => {
       if (station.provider === "IRF") {
@@ -82,7 +73,7 @@ function parseStation(text, station, now = Date.now()) {
   };
 }
 
-function assess(stations) {
+export function assess(stations) {
   const available = stations.filter((station) => station.available);
   if (!available.length) return null;
   const westward = Math.max(0, ...available.map((station) => -station.deltaX));
@@ -113,11 +104,21 @@ function assess(stations) {
   };
 }
 
-export default async function handler(_request, response) {
+export default async function handler(request, response) {
+  const query = new URL(request.url, "https://aurora.invalid").searchParams.get("stations");
+  const ids = query === null ? DEFAULT_STATION_IDS : [...new Set(query.split(","))];
+  if (!ids.length || ids.length > 4 || ids.some(id => !MAGNETOMETER_STATIONS.some(station => station.id === id))) {
+    response.status(400).json({ error: "Choose between one and four supported station codes." });
+    return;
+  }
+  const selectedStations = ids.map(id => MAGNETOMETER_STATIONS.find(station => station.id === id));
   try {
-    const stations = await Promise.all(STATIONS.map(async ({ url, ...station }) => {
+    const stations = await Promise.all(selectedStations.map(async station => {
       try {
-        const upstream = await fetch(url ?? `${ROOT}/${station.id}/${station.id}data_01.txt`, {
+        const url = station.provider === "IRF"
+          ? "https://www2.irf.se/maggraphs/rt_iaga_last_hour_1min_primary.txt"
+          : `${ROOT}/${station.id}/${station.id}data_01.txt`;
+        const upstream = await fetch(url, {
           signal: AbortSignal.timeout(8000),
           cache: "no-store",
         });

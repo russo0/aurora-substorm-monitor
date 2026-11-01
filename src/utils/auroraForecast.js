@@ -1,12 +1,9 @@
 import SunCalc from "suncalc";
 import { parseNoaaTimestamp } from "./noaaTime.js";
+import { OVERKALIX } from "./locations.js";
+import { distanceKm } from "./geo.js";
 
-export const OVERKALIX = Object.freeze({
-  name: "Överkalix",
-  latitude: 66.327,
-  longitude: 22.844,
-  timezone: "Europe/Stockholm",
-});
+export { OVERKALIX };
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -31,18 +28,6 @@ function median(values) {
   return valid.length % 2 ? valid[middle] : (valid[middle - 1] + valid[middle]) / 2;
 }
 
-function distanceKm(from, to) {
-  const latitudeDelta = toRadians(to.latitude - from.latitude);
-  const longitudeDelta = toRadians(to.longitude - from.longitude);
-  const latitudeFrom = toRadians(from.latitude);
-  const latitudeTo = toRadians(to.latitude);
-  const a =
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(latitudeFrom) * Math.cos(latitudeTo) * Math.sin(longitudeDelta / 2) ** 2;
-
-  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function bearingDegrees(from, to) {
   const latitudeFrom = toRadians(from.latitude);
   const latitudeTo = toRadians(to.latitude);
@@ -56,14 +41,12 @@ function bearingDegrees(from, to) {
 }
 
 function directionFromBearing(bearing) {
+  return ["N", "NE", "L", "SE", "S", "SO", "O", "NO"][Math.round(bearing / 45) % 8];
+}
+
+function northernDirection(bearing) {
   if (bearing >= 337.5 || bearing < 22.5) return "N";
-  if (bearing < 67.5) return "NNE";
-  if (bearing < 112.5) return "L";
-  if (bearing < 157.5) return "SSE";
-  if (bearing < 202.5) return "S";
-  if (bearing < 247.5) return "SSO";
-  if (bearing < 292.5) return "O";
-  return "NNO";
+  return bearing < 67.5 ? "NNE" : "NNO";
 }
 
 function destinationPoint(origin, bearing, distance) {
@@ -88,19 +71,27 @@ function destinationPoint(origin, bearing, distance) {
   };
 }
 
-export const WEATHER_POINTS = Object.freeze([
-  { id: "local", label: "Överkalix", ...OVERKALIX, distanceKm: 0, direction: "local" },
-  { id: "north-50", label: "Norte", ...destinationPoint(OVERKALIX, 0, 50), distanceKm: 50, direction: "N" },
-  { id: "nne-50", label: "NNE", ...destinationPoint(OVERKALIX, 25, 50), distanceKm: 50, direction: "NNE" },
-  { id: "nnw-50", label: "NNO", ...destinationPoint(OVERKALIX, 335, 50), distanceKm: 50, direction: "NNO" },
-  { id: "north-110", label: "Norte", ...destinationPoint(OVERKALIX, 0, 110), distanceKm: 110, direction: "N" },
-  { id: "nne-110", label: "NNE", ...destinationPoint(OVERKALIX, 25, 110), distanceKm: 110, direction: "NNE" },
-  { id: "nnw-110", label: "NNO", ...destinationPoint(OVERKALIX, 335, 110), distanceKm: 110, direction: "NNO" },
-]);
+export function buildWeatherPoints(location = OVERKALIX, allDirections = false) {
+  const offsets = allDirections
+    ? [0, 45, 90, 135, 180, 225, 270, 315].map(bearing => ({ bearing, distance: 75, direction: directionFromBearing(bearing) }))
+    : [50, 110].flatMap(distance => [
+      { bearing: 0, distance, direction: "N" },
+      { bearing: 25, distance, direction: "NNE" },
+      { bearing: 335, distance, direction: "NNO" },
+    ]);
+  return [
+    { id: "local", label: location.name, ...location, distanceKm: 0, direction: "local" },
+    ...offsets.map(({ bearing, distance, direction }) => ({
+      id: `${bearing}-${distance}`, label: direction, ...destinationPoint(location, bearing, distance), distanceKm: distance, direction,
+    })),
+  ];
+}
 
-function stockholmHourKey(date) {
+export const WEATHER_POINTS = Object.freeze(buildWeatherPoints());
+
+function localHourKey(date, timezone = OVERKALIX.timezone) {
   const pieces = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: OVERKALIX.timezone,
+    timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -123,7 +114,7 @@ function stockholmHourKey(date) {
 
 function readWeatherHour(dataset, point, index) {
   const hourly = dataset?.hourly;
-  if (!hourly?.time?.[index]) return null;
+  if (hourly?.time?.[index] === undefined) return null;
 
   const cloud = asNumber(hourly.cloud_cover?.[index]);
   if (cloud === null) return null;
@@ -237,7 +228,7 @@ export function getAuroraChance({ solar, ground, oval }) {
   return "Baixa";
 }
 
-export function buildObservationAssessment({ oval, weather }, now = new Date()) {
+export function buildObservationAssessment({ oval, weather, location = OVERKALIX }, now = new Date()) {
   const cloud = asNumber(weather?.current?.cloud);
   if (!oval || cloud === null) return { status: "unavailable" };
 
@@ -246,7 +237,7 @@ export function buildObservationAssessment({ oval, weather }, now = new Date()) 
   const ageMinutes = (now.getTime() - modelTime) / 60000;
   if (ageMinutes > 45 || ageMinutes < -90) return { status: "stale" };
 
-  const sunAltitude = toDegrees(SunCalc.getPosition(now, OVERKALIX.latitude, OVERKALIX.longitude).altitude);
+  const sunAltitude = toDegrees(SunCalc.getPosition(now, location.latitude, location.longitude).altitude);
   if (sunAltitude >= 0) return { status: "daylight" };
   if (sunAltitude > -6) return { status: "twilight" };
   if (cloud >= 75) return { status: "cloudy" };
@@ -255,11 +246,11 @@ export function buildObservationAssessment({ oval, weather }, now = new Date()) 
   // an observing hint, not a calibrated probability or a substorm trigger.
   const horizonSignal = oval.northIntensity >= 8 &&
     oval.northDistanceKm >= 25 && oval.northDistanceKm <= 550;
-  const location = oval.localIntensity >= 25 ? "overhead" : horizonSignal ? "horizon" : null;
-  if (!location) return { status: "weak" };
+  const viewingPosition = oval.localIntensity >= 25 ? "overhead" : horizonSignal ? "horizon" : null;
+  if (!viewingPosition) return { status: "weak" };
   return {
     status: cloud <= 45 ? "possible" : "cloud-gaps",
-    location,
+    location: viewingPosition,
     direction: oval.northDirection,
     distanceKm: oval.northDistanceKm,
   };
@@ -268,7 +259,11 @@ export function buildObservationAssessment({ oval, weather }, now = new Date()) 
 export function buildGroundAssessment(payload, now = new Date()) {
   const assessment = payload?.assessment;
   const updatedAt = new Date(assessment?.updatedAt).getTime();
-  if (!assessment || !Number.isFinite(updatedAt)) return null;
+  if (!assessment || !Number.isFinite(updatedAt)) {
+    return Array.isArray(payload?.stations)
+      ? { fresh: false, level: "unavailable", stations: payload.stations, source: payload.source }
+      : null;
+  }
   const ageMinutes = Math.max(0, Math.round((now.getTime() - updatedAt) / 60000));
   const fresh = ageMinutes <= 10;
   return {
@@ -281,7 +276,7 @@ export function buildGroundAssessment(payload, now = new Date()) {
   };
 }
 
-export function buildOvationAssessment(payload) {
+export function buildOvationAssessment(payload, location = OVERKALIX, allDirections = false) {
   if (!Array.isArray(payload?.coordinates)) return null;
 
   const points = payload.coordinates
@@ -296,8 +291,8 @@ export function buildOvationAssessment(payload) {
     )
     .map((point) => ({
       ...point,
-      distanceKm: distanceKm(OVERKALIX, point),
-      bearing: bearingDegrees(OVERKALIX, point),
+      distanceKm: distanceKm(location, point),
+      bearing: bearingDegrees(location, point),
     }));
 
   if (!points.length) return null;
@@ -310,7 +305,7 @@ export function buildOvationAssessment(payload) {
       (point) =>
         point.distanceKm >= 25 &&
         point.distanceKm <= 550 &&
-        (point.bearing >= 310 || point.bearing <= 50)
+        (allDirections || point.bearing >= 310 || point.bearing <= 50)
     )
     .sort(
       (first, second) =>
@@ -329,30 +324,40 @@ export function buildOvationAssessment(payload) {
   return {
     localIntensity: Math.round(local.intensity),
     northIntensity: north ? Math.round(north.intensity) : null,
-    northDirection: north ? directionFromBearing(north.bearing) : null,
+    northDirection: north ? (allDirections ? directionFromBearing(north.bearing) : northernDirection(north.bearing)) : null,
     northDistanceKm: north ? Math.round(north.distanceKm) : null,
     outlook,
+    allDirections,
     observationTime: payload["Observation Time"] ?? null,
     forecastTime: payload["Forecast Time"] ?? null,
   };
 }
 
-export function buildWeatherAssessment(payload, now = new Date()) {
+export function buildWeatherAssessment(payload, now = new Date(), points = WEATHER_POINTS) {
   const datasets = Array.isArray(payload) ? payload : [payload];
   const localDataset = datasets[0];
   const time = localDataset?.hourly?.time;
   if (!Array.isArray(time) || !time.length) return null;
 
-  const targetHour = stockholmHourKey(now);
-  const currentIndex = Math.max(0, time.findIndex((value) => value >= targetHour));
-  const local = readWeatherHour(localDataset, WEATHER_POINTS[0], currentIndex);
+  const unixTime = typeof time[0] === "number";
+  const targetHour = unixTime ? Math.floor(now.getTime() / 3600000) * 3600 : localHourKey(now, localDataset.timezone || OVERKALIX.timezone);
+  const currentIndex = time.findLastIndex(value => value <= targetHour);
+  if (currentIndex < 0 || (currentIndex === time.length - 1 && time[currentIndex] < targetHour)) return null;
+  const local = readWeatherHour(localDataset, points[0], currentIndex);
+  if (!local) return null;
   const bestCandidates = [];
 
   for (let index = currentIndex; index < Math.min(currentIndex + 18, time.length); index += 1) {
     const currentTime = time[index];
-    WEATHER_POINTS.slice(1).forEach((point, pointIndex) => {
-      const record = readWeatherHour(datasets[pointIndex + 1], point, index);
-      if (record && !record.isDay) bestCandidates.push({ ...record, time: currentTime });
+    points.forEach((point, pointIndex) => {
+      const dataset = datasets[pointIndex];
+      // With timezone=auto, nearby points may fall on opposite sides of a
+      // timezone boundary. Match instants rather than array positions.
+      const matchingIndex = dataset?.hourly?.time?.indexOf(currentTime) ?? -1;
+      const record = readWeatherHour(dataset, point, matchingIndex);
+      const instant = unixTime ? new Date(currentTime * 1000) : null;
+      const dark = !instant || toDegrees(SunCalc.getPosition(instant, point.latitude, point.longitude).altitude) <= -6;
+      if (record && record.cloud <= 45 && !record.isDay && dark) bestCandidates.push({ ...record, time: currentTime });
     });
   }
 
@@ -360,15 +365,19 @@ export function buildWeatherAssessment(payload, now = new Date()) {
     (first, second) =>
       first.cloud - second.cloud ||
       first.point.distanceKm - second.point.distanceKm ||
-      first.time.localeCompare(second.time)
+      (unixTime ? first.time - second.time : first.time.localeCompare(second.time))
   )[0];
 
   return {
     current: local,
     bestWindow: bestWindow ?? null,
+    timezone: localDataset.timezone || OVERKALIX.timezone,
   };
 }
 
-export function formatForecastHour(value) {
+export function formatForecastHour(value, timezone, locale = "pt-BR") {
+  if (typeof value === "number") {
+    return new Intl.DateTimeFormat(locale, { timeZone: timezone || "UTC", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value * 1000));
+  }
   return typeof value === "string" ? value.slice(11, 16) : "--";
 }

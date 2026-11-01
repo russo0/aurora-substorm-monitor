@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./i18n";
 import { useTranslation } from "react-i18next";
 import DataCard from "./components/DataCard";
@@ -7,9 +7,12 @@ import LocalForecastPanel from "./components/LocalForecastPanel";
 import WindyCloudMap from "./components/WindyCloudMap";
 import WebcamGallery from "./components/WebcamGallery";
 import HuxtForecast from "./components/HuxtForecast";
+import LocationSelector from "./components/LocationSelector";
+import { OVERKALIX } from "./utils/locations";
+import { selectMagnetometers } from "./utils/magnetometerStations";
 import { parseNoaaTimestamp } from "./utils/noaaTime";
 import {
-  WEATHER_POINTS,
+  buildWeatherPoints,
   buildGroundAssessment,
   getAuroraChance,
   buildOvationAssessment,
@@ -27,10 +30,10 @@ const AuroraJournal = import.meta.env.DEV
   ? lazy(() => import("./components/AuroraJournal"))
   : null;
 
-async function fetchNoaaJson(path) {
+async function fetchNoaaJson(path, signal) {
   const targetUrl = NOAA_BASE_URL + path;
   const response = await fetch(
-    NOAA_PROXY_URL + "?url=" + encodeURIComponent(targetUrl)
+    NOAA_PROXY_URL + "?url=" + encodeURIComponent(targetUrl), { signal }
   );
 
   if (!response.ok) {
@@ -40,15 +43,16 @@ async function fetchNoaaJson(path) {
   return response.json();
 }
 
-async function fetchWeatherForecast() {
+async function fetchWeatherForecast(location, points, signal) {
   const params = new URLSearchParams({
-    latitude: WEATHER_POINTS.map((point) => point.latitude.toFixed(4)).join(","),
-    longitude: WEATHER_POINTS.map((point) => point.longitude.toFixed(4)).join(","),
+    latitude: points.map((point) => point.latitude.toFixed(4)).join(","),
+    longitude: points.map((point) => point.longitude.toFixed(4)).join(","),
     hourly: "cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,is_day",
     forecast_days: "2",
-    timezone: "Europe/Stockholm",
+    timezone: location.timezone || "auto",
+    timeformat: "unixtime",
   });
-  const response = await fetch("https://api.open-meteo.com/v1/forecast?" + params);
+  const response = await fetch("https://api.open-meteo.com/v1/forecast?" + params, { signal });
 
   if (!response.ok) {
     throw new Error("Previsão do tempo respondeu com HTTP " + response.status);
@@ -57,9 +61,11 @@ async function fetchWeatherForecast() {
   return response.json();
 }
 
-async function fetchGroundActivity() {
+async function fetchGroundActivity(stations, signal) {
   const minuteKey = Math.floor(Date.now() / 60000);
-  const response = await fetch("/api/magnetometers?minute=" + minuteKey, { cache: "no-store" });
+  const params = new URLSearchParams({ minute: minuteKey });
+  if (stations) params.set("stations", stations.map(station => station.id).join(","));
+  const response = await fetch("/api/magnetometers?" + params, { cache: "no-store", signal });
   if (!response.ok) throw new Error("Magnetômetros responderam com HTTP " + response.status);
   return response.json();
 }
@@ -136,6 +142,10 @@ function numberDisplay(value, formatter) {
 
 export default function App() {
   const { t, i18n } = useTranslation();
+  const isLocalPage = /^\/local\/?$/.test(window.location.pathname);
+  const [location, setLocation] = useState(isLocalPage ? null : OVERKALIX);
+  const weatherPoints = useMemo(() => location ? buildWeatherPoints(location, isLocalPage) : [], [location, isLocalPage]);
+  const stations = useMemo(() => isLocalPage ? selectMagnetometers(location) : null, [location, isLocalPage]);
   const [data, setData] = useState({
     bz: null,
     by: null,
@@ -156,7 +166,15 @@ export default function App() {
   const [lastUpdate, setLastUpdate] = useState("--");
   const solarIntervalRef = useRef(null);
   const localIntervalRef = useRef(null);
+  const localRequestRef = useRef(null);
   const updateApp = usePWANewVersion();
+
+  useEffect(() => {
+    const placeName = location?.source === "device" ? t("location.yours") : location?.name;
+    document.title = isLocalPage
+      ? `${t("location.localPage")}${placeName ? `: ${placeName}` : ""} | Aurora Monitor`
+      : "Överkalix | Aurora Monitor";
+  }, [isLocalPage, location, t]);
 
   const fetchAll = useCallback(async () => {
     let bz = null;
@@ -254,34 +272,39 @@ export default function App() {
   }, []);
 
   const fetchLocalForecast = useCallback(async () => {
+    if (!location) return;
+    localRequestRef.current?.abort();
+    const controller = new AbortController();
+    localRequestRef.current = controller;
     setLocalForecast((current) => ({ ...current, loading: true, error: null }));
 
     const [ovalResult, weatherResult, groundResult] = await Promise.allSettled([
-      fetchNoaaJson("/json/ovation_aurora_latest.json"),
-      fetchWeatherForecast(),
-      fetchGroundActivity(),
+      fetchNoaaJson("/json/ovation_aurora_latest.json", controller.signal),
+      fetchWeatherForecast(location, weatherPoints, controller.signal),
+      stations?.length === 0 ? Promise.resolve(null) : fetchGroundActivity(stations, controller.signal),
     ]);
+    if (controller.signal.aborted) return;
     const errors = [];
     const oval =
-      ovalResult.status === "fulfilled" ? buildOvationAssessment(ovalResult.value) : null;
+      ovalResult.status === "fulfilled" ? buildOvationAssessment(ovalResult.value, location, isLocalPage) : null;
     const weather =
-      weatherResult.status === "fulfilled" ? buildWeatherAssessment(weatherResult.value) : null;
+      weatherResult.status === "fulfilled" ? buildWeatherAssessment(weatherResult.value, new Date(), weatherPoints) : null;
     const ground =
       groundResult.status === "fulfilled" ? buildGroundAssessment(groundResult.value) : null;
 
-    if (ovalResult.status === "rejected") errors.push("Não foi possível atualizar o oval da NOAA.");
-    if (weatherResult.status === "rejected") errors.push("Não foi possível atualizar a previsão de nuvens.");
-    if (groundResult.status === "rejected") errors.push("Não foi possível atualizar os magnetômetros locais.");
+    if (!oval) errors.push("forecast.ovalError");
+    if (!weather) errors.push("forecast.weatherError");
+    if (groundResult.status === "rejected") errors.push("forecast.groundError");
 
     setLocalForecast({
       oval,
       weather,
       ground,
       loading: false,
-      error: errors.length ? errors.join(" ") : null,
-      updatedAt: new Date().toLocaleTimeString(),
+      error: errors,
+      updatedAt: Date.now(),
     });
-  }, []);
+  }, [location, weatherPoints, stations, isLocalPage]);
 
   useEffect(() => {
     fetchAll();
@@ -292,8 +315,17 @@ export default function App() {
   useEffect(() => {
     fetchLocalForecast();
     localIntervalRef.current = window.setInterval(fetchLocalForecast, 5 * 60 * 1000);
-    return () => window.clearInterval(localIntervalRef.current);
+    return () => {
+      window.clearInterval(localIntervalRef.current);
+      localRequestRef.current?.abort();
+    };
   }, [fetchLocalForecast]);
+
+  function handleLocation(next) {
+    localRequestRef.current?.abort();
+    setLocalForecast({ oval: null, weather: null, ground: null, loading: true, error: null, updatedAt: null });
+    setLocation(next);
+  }
 
   const handleManualUpdate = () => {
     fetchAll();
@@ -357,6 +389,13 @@ export default function App() {
           </button>
         </div>
 
+        <nav aria-label={t("location.navigation")} className="mb-5 flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-white/15 bg-black/15 px-4 py-3 text-sm">
+          <span className="font-semibold text-white">{t(isLocalPage ? "location.localPage" : "location.homeLabel")}</span>
+          <a href={isLocalPage ? "/" : "/local/"} className="rounded-lg border border-auroraGreen/50 bg-auroraGreen/10 px-3 py-2 !text-auroraGreen hover:!text-white">{t(isLocalPage ? "location.back" : "location.myLocation")}</a>
+        </nav>
+
+        {isLocalPage && <LocationSelector location={location} onSelect={handleLocation} />}
+
         <div className="mb-4 grid w-full grid-cols-1 gap-4 md:grid-cols-4">
           <DataCard
             title={t("BZ (IMF)")}
@@ -384,7 +423,7 @@ export default function App() {
           />
         </div>
 
-        {chance === "Alta" && (
+        {!isLocalPage && chance === "Alta" && (
           <div className="mb-2 flex w-full flex-col items-center rounded-xl bg-auroraPurple/80 p-4 shadow-lg animate-pulse">
             <div className="text-xl font-bold tracking-wider text-white">{t("ALERTA!")}</div>
             <div className="font-medium text-white">
@@ -393,13 +432,18 @@ export default function App() {
           </div>
         )}
 
-        <div className="mb-3 flex items-center gap-2 text-lg text-white">
+        {!isLocalPage && <div className="mb-3 flex items-center gap-2 text-lg text-white">
           <span>{t("Atividade auroral regional")}:</span>
           <span className="text-xl font-semibold">{t(chance)}</span>
-        </div>
+        </div>}
 
-        <HuxtForecast />
+        {!isLocalPage && <HuxtForecast />}
+        {location && <>
         <LocalForecastPanel
+          key={`${location.latitude},${location.longitude}`}
+          location={location}
+          isLocalPage={isLocalPage}
+          stations={stations}
           solar={solar}
           oval={localForecast.oval}
           weather={localForecast.weather}
@@ -409,7 +453,9 @@ export default function App() {
           updatedAt={localForecast.updatedAt}
         />
 
-        <WindyCloudMap />
+        <WindyCloudMap location={location} isLocalPage={isLocalPage} />
+        </>}
+        {isLocalPage && <HuxtForecast />}
         <BzChart data={data.bzHistory} />
         <div className="mt-4 mb-4 flex w-full justify-center">
           <button
@@ -422,7 +468,7 @@ export default function App() {
         <div className="mt-2 text-xs text-white">
           {t("Última atualização")}: {lastUpdate ?? "--"}
         </div>
-        {AuroraJournal && (
+        {!isLocalPage && AuroraJournal && (
           <div className="mt-6 w-full">
             <Suspense fallback={null}>
               <AuroraJournal data={data} />
@@ -430,6 +476,7 @@ export default function App() {
           </div>
         )}
       </div>
+      {isLocalPage && <h2 className="mt-8 mb-4 text-lg font-semibold text-white">{t("location.webcams")}</h2>}
       <WebcamGallery />
     </div>
   );

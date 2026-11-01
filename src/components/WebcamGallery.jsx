@@ -2,7 +2,7 @@
 
 const WEBCAMS = [
    {
-  id: "Överkalix",
+  id: "overkalix-allsky",
   title: "Överkalix, Sweden",
   country: "Sweden",
   type: "image", // Auto-refreshing all-sky image
@@ -10,7 +10,7 @@ const WEBCAMS = [
   refreshInterval: 30000 // 30 seconds
 },
 {
-    id: "Överkalix",
+    id: "overkalix-youtube",
     title: "Överkalix, Sweden",
     country: "Sweden",
     type: "youtube",

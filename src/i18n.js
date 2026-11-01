@@ -1,7 +1,9 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import localTranslations from "./localTranslations";
 
 const pt = {
+  ...localTranslations.pt,
   "Monitor de Aurora": "Monitor de Aurora",
   "BZ (IMF)": "BZ (IMF)",
   "Vento Solar": "Vento Solar",
@@ -149,6 +151,7 @@ const pt = {
 };
 
 const en = {
+  ...localTranslations.en,
   "Monitor de Aurora": "Aurora Monitor",
   "BZ (IMF)": "BZ (IMF)",
   "Vento Solar": "Solar Wind",
@@ -295,14 +298,23 @@ const en = {
   "Solar wind short": "Wind",
 };
 
+let savedLanguage;
+try { savedLanguage = localStorage.getItem("aurora-language"); } catch { /* Storage can be disabled. */ }
+
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
     pt: { translation: pt },
   },
-  lng: "pt",
+  lng: ["pt", "en"].includes(savedLanguage) ? savedLanguage : "pt",
   fallbackLng: "en",
   interpolation: { escapeValue: false },
 });
+
+i18n.on("languageChanged", language => {
+  document.documentElement.lang = language === "pt" ? "pt-BR" : "en";
+  try { localStorage.setItem("aurora-language", language); } catch { /* The app also works without storage. */ }
+});
+document.documentElement.lang = i18n.language === "pt" ? "pt-BR" : "en";
 
 export default i18n;

@@ -1,6 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { buildObservationAssessment, formatForecastHour } from "../utils/auroraForecast";
+import { OVERKALIX } from "../utils/locations";
+import { isIceland } from "../utils/magnetometerStations";
 
 function toneForLevel(level) {
   if (level === "high") return "border-auroraPurple bg-auroraPurple/15";
@@ -16,6 +18,11 @@ function levelLabel(level, t) {
 
 function ovalMessage(oval, t) {
   if (!oval) return t("Aguardando oval");
+  if (oval.allDirections) {
+    if (oval.outlook === "overhead") return t("forecast.ovalOverhead");
+    if (["north", "far-north"].includes(oval.outlook)) return t("forecast.ovalDirection", { direction: t(oval.northDirection) });
+    return t("Oval fraco para esta latitude");
+  }
   if (oval.outlook === "overhead") return t("Sinal do oval sobre Överkalix");
   if (oval.outlook === "north") return t("Oval ativo ao norte");
   if (oval.outlook === "far-north") return t("Sinal fraco mais ao norte");
@@ -24,6 +31,7 @@ function ovalMessage(oval, t) {
 
 function groundMessage(ground, t) {
   if (!ground) return t("Aguardando magnetômetros");
+  if (ground.level === "unavailable") return t("forecast.noRecentGround");
   if (!ground.fresh) return t("Dados terrestres atrasados");
   if (ground.level === "high") return t("Substorm detectada na região");
   if (ground.level === "elevated") return t("Magnetosfera reagindo agora");
@@ -64,14 +72,14 @@ function recommendation({ solar, oval, weather, ground, observation }, t) {
   const localClosed = weather.current.cloud >= 75;
   const gap = weather.bestWindow;
 
-  if (happeningNow && localClear) {
+  if (happeningNow && localClear && (!oval.allDirections || ovalNearby)) {
     return t("Atividade geomagnética detectada agora. Observe o céu e confira a câmera, mesmo que o Bz já tenha mudado.");
   }
   if (happeningNow && localClosed && gap && gap.cloud <= 45) {
-    return t("Substorm em andamento, mas o céu local está fechado. Há possível abertura no corredor norte.");
+    return t("forecast.cloudGap");
   }
   if (observation.status === "possible" && observation.location === "horizon") {
-    return t("O oval sugere aurora ao norte, possivelmente baixa no horizonte. Com o céu local favorável, vale observar e conferir a câmera, mesmo com atividade geomagnética baixa.");
+    return t("forecast.horizonRecommendation", { direction: t(observation.direction) });
   }
   if (observation.status === "possible" && observation.location === "overhead") {
     return t("O oval sugere aurora sobre a região e o céu local está favorável. Confira o céu e a câmera.");
@@ -80,10 +88,10 @@ function recommendation({ solar, oval, weather, ground, observation }, t) {
     return t("Há sinal de aurora no modelo, mas as nuvens tornam a observação incerta. Confira as aberturas e a câmera.");
   }
   if (active && ovalNearby && localClear) {
-    return t("Boa combinação: observe o céu agora, principalmente para norte.");
+    return t("forecast.lookRecommendation", { direction: t(oval.northDirection || "N") });
   }
   if (active && ovalNearby && localClosed && gap && gap.cloud <= 45) {
-    return t("Atividade favorável, mas céu local fechado. Há possível abertura ao norte no horário indicado.");
+    return t("forecast.cloudGap");
   }
   if (active && ovalNearby) {
     return t("Atividade promissora; acompanhe o céu e a webcam antes de sair.");
@@ -104,9 +112,14 @@ function Metric({ label, value, detail }) {
   );
 }
 
-export default function LocalForecastPanel({ solar, oval, weather, ground, loading, error, updatedAt }) {
-  const { t } = useTranslation();
-  const observation = buildObservationAssessment({ oval, weather });
+export default function LocalForecastPanel({ solar, oval, weather, ground, loading, error, updatedAt, location = OVERKALIX, isLocalPage = false, stations = null }) {
+  const { t, i18n } = useTranslation();
+  const observation = buildObservationAssessment({ oval, weather, location });
+  const name = location.source === "device" ? t("location.yours") : location.name;
+  const noCoverage = isLocalPage && stations?.length === 0;
+  const stationDetails = ground?.stations ?? stations ?? [];
+  const timezone = weather?.timezone || (location.timezone !== "auto" ? location.timezone : "UTC");
+  const checkedTime = updatedAt && new Intl.DateTimeFormat(undefined, { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(updatedAt));
   const weatherDetail =
     weather?.current && Number.isFinite(weather.current.visibility)
       ? t("Visibilidade {{value}} km", { value: Math.round(weather.current.visibility / 1000) })
@@ -125,18 +138,18 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
         ? t("Atividade residual: novas expansões continuam possíveis")
         : null;
   const northDetail =
-    oval?.northIntensity !== null && oval?.northIntensity !== undefined
+    oval?.northIntensity > 0
       ? t("{{value}}/100 a {{direction}}, ~{{distance}} km", {
           value: oval.northIntensity,
           direction: t(oval.northDirection),
           distance: oval.northDistanceKm,
         })
-      : t("Sem sinal ao norte no modelo");
+      : t(isLocalPage ? "forecast.noNearbySignal" : "Sem sinal ao norte no modelo");
   const bestGap =
     weather?.bestWindow &&
-    t("{{hour}} — {{direction}}, ~{{distance}} km: {{cloud}}% de nuvens", {
-      hour: formatForecastHour(weather.bestWindow.time),
-      direction: weather.bestWindow.point.direction,
+    t("forecast.gapDetail", {
+      hour: formatForecastHour(weather.bestWindow.time, timezone, i18n.language === "pt" ? "pt-BR" : "en-GB"),
+      direction: t(weather.bestWindow.point.direction),
       distance: weather.bestWindow.point.distanceKm,
       cloud: Math.round(weather.bestWindow.cloud),
     });
@@ -145,10 +158,10 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
     <section className="w-full rounded-2xl border border-auroraGreen/40 bg-[#101d27]/90 p-4 md:p-5 shadow-xl">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
         <div>
-          <h2 className="text-lg font-bold text-white">{t("Previsão local: Överkalix")}</h2>
+          <h2 className="text-lg font-bold text-white">{t("forecast.title", { name })}</h2>
           <p className="text-xs text-slate-300">{t("Leitura experimental: atividade, oval e céu são mostrados separadamente.")}</p>
         </div>
-        {updatedAt && <span className="text-xs text-slate-400">{t("Oval e céu atualizados")}: {updatedAt}</span>}
+        {checkedTime && <span className="text-xs text-slate-400">{t("forecast.checked", { time: checkedTime, timezone })}</span>}
       </div>
 
       {loading && !oval && !weather && (
@@ -176,12 +189,12 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
           </div>
         </div>
 
-        <div className={"rounded-xl border p-3 " + toneForLevel(ground?.level === "elevated" ? "moderate" : ground?.level)}>
+        <div className={"rounded-xl border p-3 " + (ground?.fresh ? toneForLevel(ground?.level === "elevated" ? "moderate" : ground?.level) : "border-slate-500/50 bg-slate-500/10")}>
           <div className="text-sm font-semibold text-white">{t("Atividade no solo")}</div>
           <Metric
-            label={t("Índice geomagnético local")}
+            label={t("forecast.groundLabel")}
             value={ground?.fresh ? ground.score + "/100" : "--"}
-            detail={groundMessage(ground, t)}
+            detail={noCoverage ? t("forecast.noGroundCoverage") : groundMessage(ground, t)}
           />
           <div className="mt-2 text-xs text-slate-200">
             {ground?.fresh
@@ -190,26 +203,34 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
                   westward: ground.westward,
                   range: ground.range,
                 })
-              : t("Pello, Muonio, Ranua e Kiruna · rede IMAGE")}
+              : noCoverage ? t(isIceland(location) ? "forecast.icelandGround" : "forecast.noGroundExplanation") : t("forecast.waitingGround")}
           </div>
+          {stationDetails.length > 0 && <ul className="mt-2 space-y-1 text-[11px] text-slate-300">
+            {stationDetails.map(station => <li key={station.id} className="flex flex-wrap justify-between gap-x-2">
+              <span>{station.name}</span>
+              <span className={station.available && ground?.fresh ? "text-auroraGreen" : "text-slate-400"}>{t(station.available && ground?.fresh ? "forecast.stationRecent" : loading ? "forecast.stationChecking" : "forecast.stationUnavailable")}</span>
+            </li>)}
+          </ul>}
+          {isLocalPage && stations?.length > 0 && <p className="mt-2 text-[11px] text-slate-400">{t("forecast.regionalCaveat")}</p>}
+          {noCoverage && isIceland(location) && <a className="mt-2 inline-block text-xs !text-auroraGreen underline" href="https://en.vedur.is/weather/articles/nr/2549" target="_blank" rel="noreferrer">{t("forecast.icelandSource")}</a>}
         </div>
 
         <div className={"rounded-xl border p-3 " + (oval?.outlook === "overhead" ? "border-auroraPurple bg-auroraPurple/15" : "border-sky-300 bg-sky-300/10")}>
           <div className="text-sm font-semibold text-white">{t("Oval da NOAA")}</div>
           <Metric
-            label={t("Sinal sobre Överkalix")}
+            label={t("forecast.signalAt", { name })}
             value={oval ? oval.localIntensity + "/100" : "--"}
             detail={ovalMessage(oval, t)}
           />
           <div className="mt-2 text-xs text-slate-200">
-            {t("Melhor sinal ao norte")}: {northDetail}
+            {t(isLocalPage ? "forecast.nearbySignal" : "Melhor sinal ao norte")}: {northDetail}
           </div>
         </div>
 
         <div className="rounded-xl border border-cyan-200/50 bg-cyan-300/10 p-3">
-          <div className="text-sm font-semibold text-white">{t("Céu e corredor norte")}</div>
+          <div className="text-sm font-semibold text-white">{t(isLocalPage ? "forecast.skyAround" : "Céu e corredor norte")}</div>
           <Metric
-            label={t("Nuvens em Överkalix")}
+            label={t("forecast.cloudsAt", { name })}
             value={weather?.current ? Math.round(weather.current.cloud) + "%" : "--"}
             detail={weather?.current ? weatherDetail : t("Aguardando previsão do tempo")}
           />
@@ -225,10 +246,13 @@ export default function LocalForecastPanel({ solar, oval, weather, ground, loadi
         <p className="mt-1 text-sm text-white">{recommendation({ solar, oval, weather, ground, observation }, t)}</p>
       </div>
 
-      {error && <p className="mt-3 text-xs text-amber-200">{error}</p>}
+      {error?.length > 0 && <p role="status" className="mt-3 text-xs text-amber-200">{Array.isArray(error) ? error.map(key => t(key)).join(" ") : error}</p>}
 
       <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-        {t("O driver mede a entrada solar atual. O estado geral também considera memória da tempestade, oval NOAA OVATION e magnetômetros IMAGE de FMI e IRF. As nuvens vêm do Open-Meteo. Confira a webcam antes de dirigir.")}
+        {t("forecast.sources")}
+        {" "}<a className="!text-slate-300 underline" href="https://space.fmi.fi/image/realtime/UT/" target="_blank" rel="noreferrer">FMI IMAGE (CC BY 4.0)</a>
+        {" · "}<a className="!text-slate-300 underline" href="https://www2.irf.se/maggraphs/" target="_blank" rel="noreferrer">IRF</a>
+        {" · "}<a className="!text-slate-300 underline" href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>
       </p>
     </section>
   );

@@ -2,6 +2,31 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { HUXT_FORECAST_PAGE, HUXT_VIDEO_URL, getHuxtStatus } from './src/utils/huxtStatus.js';
+import magnetometers from './api/magnetometers.js';
+
+function magnetometerDevelopmentApi() {
+  return {
+    name: 'magnetometer-development-api',
+    configureServer(server) {
+      server.middlewares.use('/api/magnetometers', async (request, response) => {
+        if (request.method !== 'GET') {
+          response.writeHead(405, { Allow: 'GET' });
+          response.end();
+          return;
+        }
+        const adapter = {
+          setHeader: (name, value) => response.setHeader(name, value),
+          status(code) { response.statusCode = code; return this; },
+          json(value) {
+            response.setHeader('Content-Type', 'application/json; charset=utf-8');
+            response.end(JSON.stringify(value));
+          },
+        };
+        await magnetometers(request, adapter);
+      });
+    },
+  };
+}
 
 function huxtStatusDevelopmentApi() {
   return {
@@ -39,6 +64,7 @@ export default defineConfig({
   plugins: [
     react(),
     huxtStatusDevelopmentApi(),
+    magnetometerDevelopmentApi(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
