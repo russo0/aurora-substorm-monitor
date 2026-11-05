@@ -8,12 +8,14 @@ import WindyCloudMap from "./components/WindyCloudMap";
 import WebcamGallery from "./components/WebcamGallery";
 import HuxtForecast from "./components/HuxtForecast";
 import LocationSelector from "./components/LocationSelector";
+import ViewingNotice from "./components/ViewingNotice";
 import { OVERKALIX } from "./utils/locations";
 import { selectMagnetometers } from "./utils/magnetometerStations";
 import { parseNoaaTimestamp } from "./utils/noaaTime";
 import {
   buildWeatherPoints,
   buildGroundAssessment,
+  buildObservationAssessment,
   getAuroraChance,
   buildOvationAssessment,
   buildSolarAssessment,
@@ -333,6 +335,11 @@ export default function App() {
   };
 
   const solar = buildSolarAssessment(data);
+  const observation = location ? buildObservationAssessment({
+    oval: localForecast.oval,
+    weather: localForecast.weather,
+    location,
+  }) : null;
   const chance = getAuroraChance({
     solar,
     ground: localForecast.ground,
@@ -396,6 +403,8 @@ export default function App() {
 
         {isLocalPage && <LocationSelector location={location} onSelect={handleLocation} />}
 
+        <ViewingNotice observation={observation} t={t} />
+
         <div className="mb-4 grid w-full grid-cols-1 gap-4 md:grid-cols-4">
           <DataCard
             title={t("BZ (IMF)")}
@@ -447,6 +456,7 @@ export default function App() {
           solar={solar}
           oval={localForecast.oval}
           weather={localForecast.weather}
+          observation={observation}
           ground={localForecast.ground}
           loading={localForecast.loading}
           error={localForecast.error}
