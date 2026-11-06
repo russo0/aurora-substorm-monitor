@@ -338,6 +338,7 @@ export default function App() {
   const observation = location ? buildObservationAssessment({
     oval: localForecast.oval,
     weather: localForecast.weather,
+    ground: localForecast.ground,
     location,
   }) : null;
   const chance = getAuroraChance({

@@ -228,7 +228,7 @@ export function getAuroraChance({ solar, ground, oval }) {
   return "Baixa";
 }
 
-export function buildObservationAssessment({ oval, weather, location = OVERKALIX }, now = new Date()) {
+export function buildObservationAssessment({ oval, weather, ground, location = OVERKALIX }, now = new Date()) {
   const cloud = asNumber(weather?.current?.cloud);
   if (!oval || cloud === null) return { status: "unavailable" };
 
@@ -240,16 +240,20 @@ export function buildObservationAssessment({ oval, weather, location = OVERKALIX
   const sunAltitude = toDegrees(SunCalc.getPosition(now, location.latitude, location.longitude).altitude);
   if (sunAltitude >= 0) return { status: "daylight" };
   if (sunAltitude > -6) return { status: "twilight" };
-  if (cloud >= 75) return { status: "cloudy" };
 
   // Reuse the weak northern signal already shown on the oval card. This is
   // an observing hint, not a calibrated probability or a substorm trigger.
   const horizonSignal = oval.northIntensity >= 8 &&
     oval.northDistanceKm >= 25 && oval.northDistanceKm <= 550;
   const viewingPosition = oval.localIntensity >= 25 ? "overhead" : horizonSignal ? "horizon" : null;
+  if (cloud >= 75) {
+    const groundActive = ground?.fresh && ["elevated", "high"].includes(ground.level);
+    const ovalActive = viewingPosition === "overhead" || (horizonSignal && oval.northIntensity >= 15);
+    if (!groundActive || !ovalActive) return { status: "cloudy" };
+  }
   if (!viewingPosition) return { status: "weak" };
   return {
-    status: cloud <= 45 ? "possible" : "cloud-gaps",
+    status: cloud >= 75 ? "cloudy" : cloud <= 45 ? "possible" : "cloud-gaps",
     location: viewingPosition,
     direction: oval.northDirection,
     distanceKm: oval.northDistanceKm,
