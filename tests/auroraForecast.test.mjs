@@ -40,7 +40,7 @@ test("clouds and daylight limit viewing even with a northern oval signal", () =>
   assert.equal(buildObservationAssessment({ oval: { ...oval, forecastTime: midday.toISOString() }, weather }, midday).status, "daylight");
 });
 
-test("overcast forecasts retain the direction when fresh ground activity corroborates the oval", () => {
+test("aurora signals retain their direction across cloud forecasts and missing weather data", () => {
   const capture = new Date("2026-11-06T20:44:53Z");
   const input = {
     oval: {
@@ -59,8 +59,20 @@ test("overcast forecasts retain the direction when fresh ground activity corrobo
     direction: "NNO",
     distanceKm: 386,
   });
-  assert.deepEqual(buildObservationAssessment({ ...input, ground: { ...input.ground, fresh: false } }, capture), { status: "cloudy" });
-  assert.deepEqual(buildObservationAssessment({ ...input, oval: { ...input.oval, northIntensity: 10 } }, capture), { status: "cloudy" });
+  const forecasts = [[0, "possible"], [58, "cloud-gaps"], [99, "cloudy"], [100, "cloudy"], [null, "unavailable"]];
+  for (const [cloud, expectedStatus] of forecasts) {
+    const observation = buildObservationAssessment({
+      ...input,
+      weather: { current: { cloud } },
+      ground: { fresh: false, level: "unavailable" },
+    }, capture);
+    assert.equal(observation.location, "horizon");
+    assert.equal(observation.direction, "NNO");
+    assert.equal(observation.status, expectedStatus);
+  }
+  assert.equal(buildObservationAssessment({ ...input, weather: null }, capture).location, "horizon");
+  assert.equal(buildObservationAssessment({ ...input, oval: { ...input.oval, northIntensity: 10 } }, capture).location, "horizon");
+  assert.equal(buildObservationAssessment({ ...input, oval: { ...input.oval, northIntensity: 0 } }, capture).location, undefined);
   assert.equal(getAuroraChance({ ground: input.ground, oval: input.oval }), "Moderada");
 });
 
