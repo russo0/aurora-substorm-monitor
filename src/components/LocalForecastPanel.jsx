@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { buildObservationAssessment, formatForecastHour } from "../utils/auroraForecast";
+import { formatForecastHour } from "../utils/auroraForecast";
 import { OVERKALIX } from "../utils/locations";
 import { isIceland } from "../utils/magnetometerStations";
 
@@ -112,9 +112,8 @@ function Metric({ label, value, detail }) {
   );
 }
 
-export default function LocalForecastPanel({ solar, oval, weather, ground, loading, error, updatedAt, location = OVERKALIX, isLocalPage = false, stations = null }) {
+export default function LocalForecastPanel({ solar, oval, weather, observation, ground, loading, error, updatedAt, location = OVERKALIX, isLocalPage = false, stations = null }) {
   const { t, i18n } = useTranslation();
-  const observation = buildObservationAssessment({ oval, weather, location });
   const name = location.source === "device" ? t("location.yours") : location.name;
   const noCoverage = isLocalPage && stations?.length === 0;
   const stationDetails = ground?.stations ?? stations ?? [];

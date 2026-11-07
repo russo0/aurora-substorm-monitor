@@ -40,6 +40,30 @@ test("clouds and daylight limit viewing even with a northern oval signal", () =>
   assert.equal(buildObservationAssessment({ oval: { ...oval, forecastTime: midday.toISOString() }, weather }, midday).status, "daylight");
 });
 
+test("overcast forecasts retain the direction when fresh ground activity corroborates the oval", () => {
+  const capture = new Date("2026-11-06T20:44:53Z");
+  const input = {
+    oval: {
+      ...oval,
+      localIntensity: 23,
+      northIntensity: 28,
+      northDistanceKm: 386,
+      forecastTime: "2026-11-06T21:42:00Z",
+    },
+    weather: { current: { cloud: 99 } },
+    ground: { fresh: true, level: "elevated", score: 29 },
+  };
+  assert.deepEqual(buildObservationAssessment(input, capture), {
+    status: "cloudy",
+    location: "horizon",
+    direction: "NNO",
+    distanceKm: 386,
+  });
+  assert.deepEqual(buildObservationAssessment({ ...input, ground: { ...input.ground, fresh: false } }, capture), { status: "cloudy" });
+  assert.deepEqual(buildObservationAssessment({ ...input, oval: { ...input.oval, northIntensity: 10 } }, capture), { status: "cloudy" });
+  assert.equal(getAuroraChance({ ground: input.ground, oval: input.oval }), "Moderada");
+});
+
 test("weak, out-of-range, delayed or missing model data does not produce the horizon hint", () => {
   assert.equal(buildObservationAssessment({ oval: { ...oval, northIntensity: 0 }, weather }, now).status, "weak");
   assert.equal(buildObservationAssessment({ oval: { ...oval, northDistanceKm: 800 }, weather }, now).status, "weak");
